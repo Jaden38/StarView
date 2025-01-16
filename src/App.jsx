@@ -4,7 +4,8 @@ import Sidebar from './components/UI/Sidebar';
 import Toolbar from './components/UI/Toolbar';
 
 const App = () => {
-  const [visualizationMode, setVisualizationMode] = useState('all');
+  // Change to array to support multiple modes
+  const [activeModes, setActiveModes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     magnitude: 6,
@@ -20,6 +21,19 @@ const App = () => {
     }));
   };
 
+  const handleModeChange = (mode) => {
+    setActiveModes(prev => {
+      const modeExists = prev.includes(mode);
+      if (modeExists) {
+        // Remove mode if it exists
+        return prev.filter(m => m !== mode);
+      } else {
+        // Add mode if it doesn't exist
+        return [...prev, mode];
+      }
+    });
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar 
@@ -28,14 +42,14 @@ const App = () => {
       />
       <div className="flex-1 flex flex-col">
         <Toolbar 
-          onModeChange={setVisualizationMode}
-          activeMode={visualizationMode}
+          onModeChange={handleModeChange}
+          activeModes={activeModes}
           onSearch={setSearchQuery}
         />
         <main className="flex-1">
           <StarVisualization 
             filters={filters}
-            visualizationMode={visualizationMode}
+            activeModes={activeModes}
             searchQuery={searchQuery}
           />
         </main>

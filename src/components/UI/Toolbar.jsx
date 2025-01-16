@@ -1,14 +1,16 @@
 import React from 'react';
 import { Search, EyeIcon, SunIcon, ThermometerSun, Maximize2, Sparkles, Globe2 } from 'lucide-react';
 
-const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
+const Toolbar = ({ onModeChange, activeModes, onSearch }) => {
+  const isActive = (mode) => activeModes.includes(mode);
+
   return (
     <div className="bg-gray-800 p-4 flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <button 
           onClick={() => onModeChange('closest')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'closest' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('closest') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <EyeIcon className="w-4 h-4" />
@@ -18,7 +20,7 @@ const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
         <button 
           onClick={() => onModeChange('brightest')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'brightest' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('brightest') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -28,7 +30,7 @@ const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
         <button 
           onClick={() => onModeChange('hottest')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'hottest' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('hottest') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <ThermometerSun className="w-4 h-4" />
@@ -38,7 +40,7 @@ const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
         <button 
           onClick={() => onModeChange('largest')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'largest' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('largest') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <Maximize2 className="w-4 h-4" />
@@ -48,7 +50,7 @@ const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
         <button 
           onClick={() => onModeChange('constellations')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'constellations' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('constellations') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -58,7 +60,7 @@ const Toolbar = ({ onModeChange, activeMode, onSearch }) => {
         <button 
           onClick={() => onModeChange('solarSystem')}
           className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            activeMode === 'solarSystem' ? 'bg-blue-600' : 'bg-gray-600'
+            isActive('solarSystem') ? 'bg-blue-600' : 'bg-gray-600'
           }`}
         >
           <Globe2 className="w-4 h-4" />

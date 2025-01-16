@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Eye, Star, Thermometer } from 'lucide-react';
+import { Sliders, Star, Thermometer } from 'lucide-react';
 
 const Sidebar = ({ filters, onFilterChange }) => {
   return (
@@ -9,27 +9,8 @@ const Sidebar = ({ filters, onFilterChange }) => {
       <div className="space-y-4">
         <div>
           <h3 className="flex items-center mb-2">
-            <Eye className="w-4 h-4 mr-2" />
-            Visibility
-          </h3>
-          <div className="flex items-center space-x-2">
-            <input
-              type="range"
-              min="0"
-              max="15"
-              step="0.1"
-              value={filters.magnitude}
-              onChange={(e) => onFilterChange('magnitude', parseFloat(e.target.value))}
-              className="w-full"
-            />
-            <span className="w-12 text-sm">{filters.magnitude.toFixed(1)}</span>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="flex items-center mb-2">
             <Star className="w-4 h-4 mr-2" />
-            Magnitude
+            Star Magnitude
           </h3>
           <div className="flex items-center space-x-2">
             <input
@@ -37,12 +18,15 @@ const Sidebar = ({ filters, onFilterChange }) => {
               min="-27"
               max="15"
               step="0.1"
-              value={filters.maxMagnitude}
-              onChange={(e) => onFilterChange('maxMagnitude', parseFloat(e.target.value))}
+              value={filters.magnitude}
+              onChange={(e) => onFilterChange('magnitude', parseFloat(e.target.value))}
               className="w-full"
             />
-            <span className="w-12 text-sm">{filters.maxMagnitude.toFixed(1)}</span>
+            <span className="w-16 text-sm">{filters.magnitude.toFixed(1)} mag</span>
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Lower values = brighter stars
+          </p>
         </div>
 
         <div>

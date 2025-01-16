@@ -9,30 +9,46 @@ import {
   filterStars 
 } from '../../utils/threeHelper';
 
-const StarVisualization = ({ filters, visualizationMode, searchQuery }) => {
+const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   const containerRef = useRef();
   const sceneRef = useRef(null);
+  const rendererRef = useRef(null);
+  const cameraRef = useRef(null);
+  const controlsRef = useRef(null);
+  const animationFrameRef = useRef(null);
   const { stars, loading, error } = useStarData();
   const [selectedStar, setSelectedStar] = useState(null);
   const [selectedObject, setSelectedObject] = useState(null);
   const [constellation, setConstellation] = useState(null);
 
-  // Apply all filters to stars
+  // Star filtering logic remains the same
   const getFilteredStars = () => {
     if (!stars || !stars.length) return [];
     
     let filteredStars = [...stars];
 
-    // Apply visualization mode filters first
-    if (visualizationMode !== 'all' && visualizationMode !== 'solarSystem') {
-      if (visualizationMode === 'constellations') {
-        filteredStars = filterStars.constellations(filteredStars, constellation);
-      } else {
-        filteredStars = filterStars[visualizationMode](filteredStars);
+    if (activeModes.length > 0) {
+      const modeStars = activeModes
+        .filter(mode => mode !== 'solarSystem' && mode !== 'constellations')
+        .map(mode => {
+          const modeFilteredStars = filterStars[mode]([...stars]);
+          return modeFilteredStars;
+        });
+
+      if (modeStars.length > 0) {
+        const starIds = new Set();
+        filteredStars = modeStars.flat().filter(star => {
+          if (starIds.has(star.id)) return false;
+          starIds.add(star.id);
+          return true;
+        });
+      }
+
+      if (activeModes.includes('constellations') && constellation) {
+        filteredStars = filteredStars.filter(star => star.con === constellation);
       }
     }
 
-    // Then apply basic filters
     filteredStars = filteredStars.filter(star => {
       const temp = getStarTemperature(star.spect);
       return (
@@ -42,21 +58,12 @@ const StarVisualization = ({ filters, visualizationMode, searchQuery }) => {
       );
     });
 
-    // Apply search filter if any
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredStars = filteredStars.filter(star => 
         (star.proper && star.proper.toLowerCase().includes(query)) ||
         (star.con && star.con.toLowerCase().includes(query))
       );
-      
-      // If search matches a constellation, set it as active
-      const matchedConstellation = filteredStars.find(star => 
-        star.con && star.con.toLowerCase().includes(query)
-      )?.con;
-      if (matchedConstellation) {
-        setConstellation(matchedConstellation);
-      }
     }
 
     return filteredStars;
@@ -69,13 +76,61 @@ const StarVisualization = ({ filters, visualizationMode, searchQuery }) => {
     return temps[type] || 5000;
   };
 
+  // Initial setup effect - runs once
   useEffect(() => {
     if (!containerRef.current || loading) return;
 
     const { scene, camera, renderer, controls, raycaster, cleanup } = setupScene(containerRef.current);
+    
     sceneRef.current = scene;
+    rendererRef.current = renderer;
+    cameraRef.current = camera;
+    controlsRef.current = controls;
 
-    // Mouse position handler
+    const handleResize = () => {
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
+      
+      const camera = cameraRef.current;
+      const renderer = rendererRef.current;
+      
+      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameRef.current);
+      cleanup();
+    };
+  }, [loading]);
+
+  // Scene update effect
+  useEffect(() => {
+    if (!sceneRef.current || !cameraRef.current || !controlsRef.current || loading) return;
+
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const renderer = rendererRef.current;
+
+    // Clear existing objects
+    while(scene.children.length > 0) {
+      scene.remove(scene.children[0]);
+    }
+
+    // Add lights
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 10;
+
     const mouse = new THREE.Vector2();
     const handleMouseMove = (event) => {
       if (!containerRef.current) return;
@@ -85,7 +140,8 @@ const StarVisualization = ({ filters, visualizationMode, searchQuery }) => {
 
       raycaster.setFromCamera(mouse, camera);
 
-      if (visualizationMode === 'solarSystem') {
+      // Handle solar system interactions
+      if (activeModes.includes('solarSystem')) {
         const solarSystem = scene.children.find(child => child.userData.type === 'solarSystem');
         if (solarSystem) {
           const intersects = raycaster.intersectObjects(solarSystem.children, false)
@@ -99,66 +155,84 @@ const StarVisualization = ({ filters, visualizationMode, searchQuery }) => {
             setSelectedObject(null);
           }
         }
-      } else {
-        const starField = scene.children.find(child => child instanceof THREE.Points);
-        if (starField) {
-          const intersects = raycaster.intersectObject(starField);
-          if (intersects.length > 0) {
-            const index = intersects[0].index;
-            const star = starField.userData.stars[index];
-            setSelectedStar(star);
-            setSelectedObject(null);
-            if (star.con) {
-              setConstellation(star.con);
-            }
-          } else {
-            setSelectedStar(null);
+      }
+
+      // Handle star interactions
+      const starField = scene.children.find(child => child instanceof THREE.Points);
+      if (starField) {
+        const intersects = raycaster.intersectObject(starField);
+        if (intersects.length > 0) {
+          const index = intersects[0].index;
+          const star = starField.userData.stars[index];
+          setSelectedStar(star);
+          setSelectedObject(null);
+          if (star.con) {
+            setConstellation(star.con);
           }
+        } else if (!activeModes.includes('solarSystem')) {
+          setSelectedStar(null);
         }
       }
     };
 
-    if (visualizationMode === 'solarSystem') {
+    // Add objects to scene
+    const filteredStars = getFilteredStars();
+    if (filteredStars.length > 0) {
+      const starField = createStarField(filteredStars, [], constellation);
+      scene.add(starField);
+      
+      if (activeModes.includes('constellations') && constellation) {
+        const constellationLines = createConstellationLines(filteredStars, constellation);
+        if (constellationLines) {
+          scene.add(constellationLines);
+        }
+      }
+    }
+
+    if (activeModes.includes('solarSystem')) {
       const solarSystem = createSolarSystem();
       scene.add(solarSystem);
-      camera.position.set(0, 1000, 2000);
-      controls.target.set(0, 0, 0);
-    } else {
-      const filteredStars = getFilteredStars();
-      if (filteredStars.length > 0) {
-        const starField = createStarField(filteredStars, [], constellation);
-        scene.add(starField);
-
-        if (visualizationMode === 'constellations' && constellation) {
-          const constellationLines = createConstellationLines(filteredStars, constellation);
-          if (constellationLines) {
-            scene.add(constellationLines);
-          }
-        }
+      
+      if (activeModes.length === 1) {
+        camera.position.set(0, 1000, 2000);
+        controls.target.set(0, 0, 0);
       }
     }
 
     containerRef.current.addEventListener('mousemove', handleMouseMove);
 
+    // Animation loop
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
       controls.update();
+
+      if (activeModes.includes('solarSystem')) {
+        const solarSystem = scene.children.find(child => child.userData.type === 'solarSystem');
+        if (solarSystem) {
+          solarSystem.children.forEach(child => {
+            if (child.userData.objectType === 'planet') {
+              const speed = 0.001 / Math.sqrt(child.position.x);
+              const distance = child.position.x;
+              child.position.x = distance * Math.cos(performance.now() * speed);
+              child.position.z = distance * Math.sin(performance.now() * speed);
+            }
+          });
+        }
+      }
+
       renderer.render(scene, camera);
     };
+    
     animate();
 
     return () => {
-      cleanup();
+      cancelAnimationFrame(animationFrameRef.current);
       if (containerRef.current) {
         containerRef.current.removeEventListener('mousemove', handleMouseMove);
       }
-      while(scene.children.length > 0) {
-        scene.remove(scene.children[0]);
-      }
     };
-  }, [stars, loading, visualizationMode, filters, searchQuery, constellation]);
+  }, [stars, loading, activeModes, filters, searchQuery, constellation]);
 
-  // Helper function to format large numbers
   const formatNumber = (num) => {
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
     if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
