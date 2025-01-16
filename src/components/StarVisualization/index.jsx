@@ -58,6 +58,16 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       );
     });
 
+    filteredStars = filteredStars.filter(star => {
+      const temp = getStarTemperature(star.spect);
+      const relevantMagnitude = filters.magnitudeType === 'apparent' ? star.mag : star.absmag;
+      return (
+        relevantMagnitude <= filters.magnitude &&
+        star.dist <= filters.maxDistance &&
+        temp >= filters.minTemp
+      );
+    });
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredStars = filteredStars.filter(star => 

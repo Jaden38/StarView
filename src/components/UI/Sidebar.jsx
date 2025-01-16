@@ -8,15 +8,26 @@ const Sidebar = ({ filters, onFilterChange }) => {
       
       <div className="space-y-4">
         <div>
-          <h3 className="flex items-center mb-2">
-            <Star className="w-4 h-4 mr-2" />
-            Star Magnitude
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="flex items-center">
+              <Star className="w-4 h-4 mr-2" />
+              Star Magnitude
+            </h3>
+            <select 
+              className="bg-gray-800 text-sm rounded px-2 py-1 border border-gray-700"
+              value={filters.magnitudeType || 'apparent'}
+              onChange={(e) => onFilterChange('magnitudeType', e.target.value)}
+            >
+              <option value="apparent">Apparent</option>
+              <option value="absolute">Absolute</option>
+            </select>
+          </div>
+          
           <div className="flex items-center space-x-2">
             <input
               type="range"
-              min="-27"
-              max="15"
+              min={filters.magnitudeType === 'absolute' ? -15 : -27}
+              max={filters.magnitudeType === 'absolute' ? 15 : 15}
               step="0.1"
               value={filters.magnitude}
               onChange={(e) => onFilterChange('magnitude', parseFloat(e.target.value))}
@@ -25,6 +36,11 @@ const Sidebar = ({ filters, onFilterChange }) => {
             <span className="w-16 text-sm">{filters.magnitude.toFixed(1)} mag</span>
           </div>
           <p className="text-xs text-gray-400 mt-1">
+            {filters.magnitudeType === 'apparent' 
+              ? 'Apparent magnitude (as seen from Earth)'
+              : 'Absolute magnitude (at 10 parsecs)'}
+          </p>
+          <p className="text-xs text-gray-400">
             Lower values = brighter stars
           </p>
         </div>

@@ -8,8 +8,8 @@ const App = () => {
   const [activeModes, setActiveModes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
-    magnitude: 6,
-    maxMagnitude: 15,
+    magnitude: 6.0,
+    magnitudeType: 'apparent',
     minTemp: 2000,
     maxDistance: 1000,
   });
