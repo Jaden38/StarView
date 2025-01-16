@@ -27,6 +27,10 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
     
     let filteredStars = [...stars];
 
+    if (activeModes.includes('solarSystem')) {
+      filteredStars = filteredStars.filter(star => star.id !== 0);
+    }
+    
     if (activeModes.length > 0) {
       const modeStars = activeModes
         .filter(mode => mode !== 'solarSystem' && mode !== 'constellations')
