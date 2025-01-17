@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import useStarData from '../../hooks/useStarData';
-import { 
-  setupScene, 
-  createStarField, 
-  createConstellationLines, 
+import React, { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import useStarData from "../../hooks/useStarData";
+import {
+  setupScene,
+  createStarField,
+  createConstellationLines,
   createSolarSystem,
-  filterStars 
-} from '../../utils/threeHelper';
+  filterStars,
+} from "../../utils/threeHelper";
 
 const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   const containerRef = useRef();
@@ -20,40 +20,43 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   const [selectedStar, setSelectedStar] = useState(null);
   const [selectedObject, setSelectedObject] = useState(null);
   const [constellation, setConstellation] = useState(null);
+  const [lastModes, setLastModes] = useState([]);
 
   // Star filtering logic remains the same
   const getFilteredStars = () => {
     if (!stars || !stars.length) return [];
-    
+
     let filteredStars = [...stars];
 
-    if (activeModes.includes('solarSystem')) {
-      filteredStars = filteredStars.filter(star => star.id !== 0);
+    if (activeModes.includes("solarSystem")) {
+      filteredStars = filteredStars.filter((star) => star.id !== 0);
     }
-    
+
     if (activeModes.length > 0) {
       const modeStars = activeModes
-        .filter(mode => mode !== 'solarSystem' && mode !== 'constellations')
-        .map(mode => {
+        .filter((mode) => mode !== "solarSystem" && mode !== "constellations")
+        .map((mode) => {
           const modeFilteredStars = filterStars[mode]([...stars]);
           return modeFilteredStars;
         });
 
       if (modeStars.length > 0) {
         const starIds = new Set();
-        filteredStars = modeStars.flat().filter(star => {
+        filteredStars = modeStars.flat().filter((star) => {
           if (starIds.has(star.id)) return false;
           starIds.add(star.id);
           return true;
         });
       }
 
-      if (activeModes.includes('constellations') && constellation) {
-        filteredStars = filteredStars.filter(star => star.con === constellation);
+      if (activeModes.includes("constellations") && constellation) {
+        filteredStars = filteredStars.filter(
+          (star) => star.con === constellation
+        );
       }
     }
 
-    filteredStars = filteredStars.filter(star => {
+    filteredStars = filteredStars.filter((star) => {
       const temp = getStarTemperature(star.spect);
       return (
         star.mag <= filters.magnitude &&
@@ -62,9 +65,10 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       );
     });
 
-    filteredStars = filteredStars.filter(star => {
+    filteredStars = filteredStars.filter((star) => {
       const temp = getStarTemperature(star.spect);
-      const relevantMagnitude = filters.magnitudeType === 'apparent' ? star.mag : star.absmag;
+      const relevantMagnitude =
+        filters.magnitudeType === "apparent" ? star.mag : star.absmag;
       return (
         relevantMagnitude <= filters.magnitude &&
         star.dist <= filters.maxDistance &&
@@ -74,9 +78,10 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filteredStars = filteredStars.filter(star => 
-        (star.proper && star.proper.toLowerCase().includes(query)) ||
-        (star.con && star.con.toLowerCase().includes(query))
+      filteredStars = filteredStars.filter(
+        (star) =>
+          (star.proper && star.proper.toLowerCase().includes(query)) ||
+          (star.con && star.con.toLowerCase().includes(query))
       );
     }
 
@@ -86,7 +91,15 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   const getStarTemperature = (spect) => {
     if (!spect) return 5000;
     const type = spect[0];
-    const temps = { O: 30000, B: 20000, A: 9000, F: 7000, G: 5500, K: 4000, M: 3000 };
+    const temps = {
+      O: 30000,
+      B: 20000,
+      A: 9000,
+      F: 7000,
+      G: 5500,
+      K: 4000,
+      M: 3000,
+    };
     return temps[type] || 5000;
   };
 
@@ -94,28 +107,34 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   useEffect(() => {
     if (!containerRef.current || loading) return;
 
-    const { scene, camera, renderer, controls, raycaster, cleanup } = setupScene(containerRef.current);
-    
+    const { scene, camera, renderer, controls, raycaster, cleanup } =
+      setupScene(containerRef.current);
+
     sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
     controlsRef.current = controls;
 
     const handleResize = () => {
-      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
-      
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current)
+        return;
+
       const camera = cameraRef.current;
       const renderer = rendererRef.current;
-      
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+
+      camera.aspect =
+        containerRef.current.clientWidth / containerRef.current.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+      renderer.setSize(
+        containerRef.current.clientWidth,
+        containerRef.current.clientHeight
+      );
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameRef.current);
       cleanup();
     };
@@ -129,6 +148,15 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     const renderer = rendererRef.current;
+
+    // Check if we're specifically switching to solar system mode
+    const isNewSolarSystemMode = 
+      activeModes.includes('solarSystem') && 
+      activeModes.length === 1 && 
+      !lastModes.includes('solarSystem');
+    
+    // Update last modes for next comparison
+    setLastModes(activeModes);
 
     // Clear existing objects
     while(scene.children.length > 0) {
@@ -155,11 +183,14 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       raycaster.setFromCamera(mouse, camera);
 
       // Handle solar system interactions
-      if (activeModes.includes('solarSystem')) {
-        const solarSystem = scene.children.find(child => child.userData.type === 'solarSystem');
+      if (activeModes.includes("solarSystem")) {
+        const solarSystem = scene.children.find(
+          (child) => child.userData.type === "solarSystem"
+        );
         if (solarSystem) {
-          const intersects = raycaster.intersectObjects(solarSystem.children, false)
-            .filter(intersect => intersect.object.userData.objectType);
+          const intersects = raycaster
+            .intersectObjects(solarSystem.children, false)
+            .filter((intersect) => intersect.object.userData.objectType);
 
           if (intersects.length > 0) {
             const object = intersects[0].object;
@@ -172,7 +203,9 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       }
 
       // Handle star interactions
-      const starField = scene.children.find(child => child instanceof THREE.Points);
+      const starField = scene.children.find(
+        (child) => child instanceof THREE.Points
+      );
       if (starField) {
         const intersects = raycaster.intersectObject(starField);
         if (intersects.length > 0) {
@@ -183,7 +216,7 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
           if (star.con) {
             setConstellation(star.con);
           }
-        } else if (!activeModes.includes('solarSystem')) {
+        } else if (!activeModes.includes("solarSystem")) {
           setSelectedStar(null);
         }
       }
@@ -194,9 +227,12 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
     if (filteredStars.length > 0) {
       const starField = createStarField(filteredStars, [], constellation);
       scene.add(starField);
-      
-      if (activeModes.includes('constellations') && constellation) {
-        const constellationLines = createConstellationLines(filteredStars, constellation);
+
+      if (activeModes.includes("constellations") && constellation) {
+        const constellationLines = createConstellationLines(
+          filteredStars,
+          constellation
+        );
         if (constellationLines) {
           scene.add(constellationLines);
         }
@@ -207,28 +243,41 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       const solarSystem = createSolarSystem();
       scene.add(solarSystem);
       
-      if (activeModes.length === 1) {
-        camera.position.set(0, 1000, 2000);
+      if (isNewSolarSystemMode) {
+        camera.position.set(0, 2000, 4000);
+        camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
       }
     }
 
-    containerRef.current.addEventListener('mousemove', handleMouseMove);
+    containerRef.current.addEventListener("mousemove", handleMouseMove);
 
-    // Animation loop
+
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
       controls.update();
 
-      if (activeModes.includes('solarSystem')) {
-        const solarSystem = scene.children.find(child => child.userData.type === 'solarSystem');
+      if (activeModes.includes("solarSystem")) {
+        const solarSystem = scene.children.find(
+          (child) => child.userData.type === "solarSystem"
+        );
         if (solarSystem) {
-          solarSystem.children.forEach(child => {
-            if (child.userData.objectType === 'planet') {
-              const speed = 0.001 / Math.sqrt(child.position.x);
-              const distance = child.position.x;
-              child.position.x = distance * Math.cos(performance.now() * speed);
-              child.position.z = distance * Math.sin(performance.now() * speed);
+          solarSystem.children.forEach((child) => {
+            if (child.userData.objectType === "planet") {
+              // Get the original distance and period from the planet's userData
+              const orbitalDistance = child.userData.distance * 2e-6; // Match the scale used in createSolarSystem
+              const orbitalPeriod = child.userData.orbitalPeriod;
+
+              // Calculate angular velocity based on orbital period
+              // 2π radians per orbit, divided by period in days
+              const angularSpeed = (2 * Math.PI) / (orbitalPeriod * 60); // Multiply by 60 to slow down the rotation
+
+              // Calculate new position while maintaining orbital distance
+              const time = performance.now() * 0.001; // Convert to seconds
+              const angle = time * angularSpeed;
+
+              child.position.x = orbitalDistance * Math.cos(angle);
+              child.position.z = orbitalDistance * Math.sin(angle);
             }
           });
         }
@@ -236,13 +285,13 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
       renderer.render(scene, camera);
     };
-    
+
     animate();
 
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
       if (containerRef.current) {
-        containerRef.current.removeEventListener('mousemove', handleMouseMove);
+        containerRef.current.removeEventListener("mousemove", handleMouseMove);
       }
     };
   }, [stars, loading, activeModes, filters, searchQuery, constellation]);
@@ -256,17 +305,17 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="absolute inset-0" />
-      
+
       {selectedStar && (
         <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
           <h3 className="font-bold text-xl">
             {selectedStar.proper || `Star ${selectedStar.id}`}
           </h3>
           <div className="space-y-1 mt-2">
-            <p>Constellation: {selectedStar.con || 'Unknown'}</p>
+            <p>Constellation: {selectedStar.con || "Unknown"}</p>
             <p>Distance: {selectedStar.dist.toFixed(2)} parsecs</p>
             <p>Magnitude: {selectedStar.mag.toFixed(2)}</p>
-            <p>Spectral Type: {selectedStar.spect || 'Unknown'}</p>
+            <p>Spectral Type: {selectedStar.spect || "Unknown"}</p>
             {selectedStar.lum && (
               <p>Luminosity: {selectedStar.lum.toFixed(2)} × Sun</p>
             )}
@@ -276,12 +325,12 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
       {selectedObject && (
         <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
-          <h3 className="font-bold text-xl">
-            {selectedObject.name}
-          </h3>
+          <h3 className="font-bold text-xl">{selectedObject.name}</h3>
           <div className="space-y-1 mt-2">
-            <p>Type: {selectedObject.objectType === 'sun' ? 'Star' : 'Planet'}</p>
-            {selectedObject.objectType === 'sun' ? (
+            <p>
+              Type: {selectedObject.objectType === "sun" ? "Star" : "Planet"}
+            </p>
+            {selectedObject.objectType === "sun" ? (
               <>
                 <p>Spectral Type: {selectedObject.type}</p>
                 <p>Temperature: {formatNumber(selectedObject.temperature)}K</p>
@@ -290,7 +339,10 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
               </>
             ) : (
               <>
-                <p>Distance from Sun: {formatNumber(selectedObject.distance / 1e6)} million km</p>
+                <p>
+                  Distance from Sun:{" "}
+                  {formatNumber(selectedObject.distance / 1e6)} million km
+                </p>
                 <p>Temperature: {selectedObject.temperature}K</p>
                 <p>Radius: {formatNumber(selectedObject.radius)} km</p>
                 <p>Mass: {selectedObject.mass} Earth masses</p>

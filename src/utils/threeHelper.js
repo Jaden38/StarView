@@ -100,13 +100,16 @@ export const setupScene = (container) => {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
+  // Adjusted camera settings with much larger far clipping plane
   const camera = new THREE.PerspectiveCamera(
     75,
     container.clientWidth / container.clientHeight,
-    0.1,
-    10000
+    0.001,  // Smaller near plane to see close objects
+    1000000  // Much larger far plane to see distant objects
   );
-  camera.position.z = 1000;
+  
+  // Position camera further out to see more of the solar system
+  camera.position.set(0, 2000, 4000);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -116,19 +119,21 @@ export const setupScene = (container) => {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  controls.maxDistance = 100000;  // Allow zooming out further
+  controls.minDistance = 1;       // Allow zooming in closer
 
   // Add ambient light for better visibility
-  const ambientLight = new THREE.AmbientLight(0x404040);
+  const ambientLight = new THREE.AmbientLight(0x404040, 2);  // Increased intensity
   scene.add(ambientLight);
 
   // Add directional light for shadows
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2);  // Increased intensity
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
 
-  // Raycaster setup
+  // Raycaster setup with adjusted threshold
   const raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = 10;
+  raycaster.params.Points.threshold = 20;  // Increased for better selection
 
   const handleResize = () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -250,12 +255,16 @@ export const createConstellationLines = (stars, constellation) => {
   return new THREE.LineSegments(geometry, material);
 };
 
-export const createSolarSystem = (scale = 1e-6) => {
+export const createSolarSystem = (scale = 2e-6) => {
   const group = new THREE.Group();
   group.userData.type = 'solarSystem';
 
-  // Create Sun
-  const sunGeometry = new THREE.SphereGeometry(SOLAR_SYSTEM.sun.radius * scale, 32, 32);
+  // Keep sun size the same
+  const sunGeometry = new THREE.SphereGeometry(
+    SOLAR_SYSTEM.sun.radius * scale * 20,  // Keep existing sun scale
+    32,
+    32
+  );
   const sunMaterial = new THREE.MeshBasicMaterial({ color: SOLAR_SYSTEM.sun.color });
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sun.userData = { 
@@ -264,9 +273,13 @@ export const createSolarSystem = (scale = 1e-6) => {
   };
   group.add(sun);
 
-  // Create planets
-  SOLAR_SYSTEM.planets.forEach(planet => {
-    const planetGeometry = new THREE.SphereGeometry(planet.radius * scale * 50, 32, 32);
+  // Increase base multiplier for planets
+  SOLAR_SYSTEM.planets.forEach((planet, index) => {
+    const planetGeometry = new THREE.SphereGeometry(
+      planet.radius * scale * 2000,  // Increased from 1000 to 2000
+      32,
+      32
+    );
     const planetMaterial = new THREE.MeshPhongMaterial({ color: planet.color });
     const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
     
