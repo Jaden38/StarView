@@ -522,7 +522,15 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
       {isFreeCamera && (
           <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-90 text-white p-2 rounded">
-            <p className="text-sm">Controls: Arrows to move, Mouse to look, Shift to speed up</p>
+            <div className="text-sm">
+              <p>Controls:</p>
+              <ul className="list-disc pl-4">
+                <li>ZQSD: Move forward, backward, left, and right</li>
+                <li>Arrow keys: Vertical (up/down) and rotational movement</li>
+                <li>Mouse: Look around</li>
+                <li>Shift: Speed up</li>
+              </ul>
+            </div>
           </div>
       )}
     </div>
