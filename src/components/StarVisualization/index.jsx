@@ -1,26 +1,79 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import * as THREE from "three";
 import useStarData from "../../hooks/useStarData";
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import {
-  setupScene,
-  createStarField,
   createConstellationLines,
   createSolarSystem,
+  createStarField,
   filterStars,
+  setupScene,
 } from "../../utils/threeHelper";
 
-const StarVisualization = ({ filters, activeModes, searchQuery }) => {
+const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
   const containerRef = useRef();
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
+  const orbitControlsRef = useRef(null);
+  const pointerControlsRef = useRef(null);
+  const moveRef = useRef({ forward: false, backward: false, left: false, right: false });
+  const speedRef = useRef(50);
   const animationFrameRef = useRef(null);
   const { stars, loading, error } = useStarData();
   const [selectedStar, setSelectedStar] = useState(null);
   const [selectedObject, setSelectedObject] = useState(null);
   const [constellation, setConstellation] = useState(null);
   const [lastModes, setLastModes] = useState([]);
+
+  const handleKeyDown = (event) => {
+    if (!isFreeCamera) return;
+    switch (event.code) {
+      case 'KeyW': moveRef.current.forward = true; break;
+      case 'KeyS': moveRef.current.backward = true; break;
+      case 'KeyA': moveRef.current.left = true; break;
+      case 'KeyD': moveRef.current.right = true; break;
+      case 'ShiftLeft': speedRef.current = 100; break;
+    }
+  };
+  const handleKeyUp = (event) => {
+    if (!isFreeCamera) return;
+    switch (event.code) {
+      case 'KeyW': moveRef.current.forward = false; break;
+      case 'KeyS': moveRef.current.backward = false; break;
+      case 'KeyA': moveRef.current.left = false; break;
+      case 'KeyD': moveRef.current.right = false; break;
+      case 'ShiftLeft': speedRef.current = 50; break;
+    }
+  };
+
+  const toggleCamera = () => {
+    if (!cameraRef.current) return;
+
+    onCameraToggle();
+
+    if (!isFreeCamera) {
+      orbitControlsRef.current.enabled = false;
+      pointerControlsRef.current.lock();
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+    } else {
+      pointerControlsRef.current.unlock();
+      orbitControlsRef.current.enabled = true;
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+
+      // Reset camera position
+      cameraRef.current.position.set(0, 2000, 4000);
+      cameraRef.current.lookAt(0, 0, 0);
+      orbitControlsRef.current.target.set(0, 0, 0);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    toggleCamera
+  }));
 
   // Star filtering logic remains the same
   const getFilteredStars = () => {
@@ -107,13 +160,17 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
   useEffect(() => {
     if (!containerRef.current || loading) return;
 
-    const { scene, camera, renderer, controls, raycaster, cleanup } =
-      setupScene(containerRef.current);
+    const { scene, camera, renderer, controls: orbitControls, raycaster, cleanup } = setupScene(containerRef.current);
+
 
     sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
-    controlsRef.current = controls;
+    orbitControlsRef.current = orbitControls;
+    controlsRef.current = orbitControls;
+    pointerControlsRef.current = new PointerLockControls(camera, containerRef.current);
+
+
 
     const handleResize = () => {
       if (!containerRef.current || !cameraRef.current || !rendererRef.current)
@@ -150,11 +207,11 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
     const renderer = rendererRef.current;
 
     // Check if we're specifically switching to solar system mode
-    const isNewSolarSystemMode = 
-      activeModes.includes('solarSystem') && 
-      activeModes.length === 1 && 
-      !lastModes.includes('solarSystem');
-    
+    const isNewSolarSystemMode =
+        activeModes.includes('solarSystem') &&
+        activeModes.length === 1 &&
+        !lastModes.includes('solarSystem');
+
     // Update last modes for next comparison
     setLastModes(activeModes);
 
@@ -175,7 +232,8 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
     const mouse = new THREE.Vector2();
     const handleMouseMove = (event) => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || isFreeCamera) return;
+
       const rect = containerRef.current.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -185,12 +243,12 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
       // Handle solar system interactions
       if (activeModes.includes("solarSystem")) {
         const solarSystem = scene.children.find(
-          (child) => child.userData.type === "solarSystem"
+            (child) => child.userData.type === "solarSystem"
         );
         if (solarSystem) {
           const intersects = raycaster
-            .intersectObjects(solarSystem.children, false)
-            .filter((intersect) => intersect.object.userData.objectType);
+              .intersectObjects(solarSystem.children, false)
+              .filter((intersect) => intersect.object.userData.objectType);
 
           if (intersects.length > 0) {
             const object = intersects[0].object;
@@ -204,7 +262,7 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
       // Handle star interactions
       const starField = scene.children.find(
-        (child) => child instanceof THREE.Points
+          (child) => child instanceof THREE.Points
       );
       if (starField) {
         const intersects = raycaster.intersectObject(starField);
@@ -230,8 +288,8 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
       if (activeModes.includes("constellations") && constellation) {
         const constellationLines = createConstellationLines(
-          filteredStars,
-          constellation
+            filteredStars,
+            constellation
         );
         if (constellationLines) {
           scene.add(constellationLines);
@@ -242,7 +300,7 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
     if (activeModes.includes('solarSystem')) {
       const solarSystem = createSolarSystem();
       scene.add(solarSystem);
-      
+
       if (isNewSolarSystemMode) {
         camera.position.set(0, 2000, 4000);
         camera.lookAt(0, 0, 0);
@@ -252,28 +310,40 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
 
     containerRef.current.addEventListener("mousemove", handleMouseMove);
 
-
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
-      controls.update();
+
+      if (isFreeCamera) {
+        const camera = cameraRef.current;
+        const direction = new THREE.Vector3();
+        const sideVector = new THREE.Vector3();
+
+        camera.getWorldDirection(direction);
+        camera.getWorldDirection(sideVector);
+        sideVector.cross(camera.up);
+
+        const { forward, backward, left, right } = moveRef.current;
+        const speed = speedRef.current;
+
+        if (forward) camera.position.addScaledVector(direction, speed);
+        if (backward) camera.position.addScaledVector(direction, -speed);
+        if (left) camera.position.addScaledVector(sideVector, -speed);
+        if (right) camera.position.addScaledVector(sideVector, speed);
+      } else {
+        orbitControlsRef.current?.update();
+      }
 
       if (activeModes.includes("solarSystem")) {
         const solarSystem = scene.children.find(
-          (child) => child.userData.type === "solarSystem"
+            (child) => child.userData.type === "solarSystem"
         );
         if (solarSystem) {
           solarSystem.children.forEach((child) => {
             if (child.userData.objectType === "planet") {
-              // Get the original distance and period from the planet's userData
-              const orbitalDistance = child.userData.distance * 2e-6; // Match the scale used in createSolarSystem
+              const orbitalDistance = child.userData.distance * 2e-6;
               const orbitalPeriod = child.userData.orbitalPeriod;
-
-              // Calculate angular velocity based on orbital period
-              // 2π radians per orbit, divided by period in days
-              const angularSpeed = (2 * Math.PI) / (orbitalPeriod * 60); // Multiply by 60 to slow down the rotation
-
-              // Calculate new position while maintaining orbital distance
-              const time = performance.now() * 0.001; // Convert to seconds
+              const angularSpeed = (2 * Math.PI) / (orbitalPeriod * 60);
+              const time = performance.now() * 0.001;
               const angle = time * angularSpeed;
 
               child.position.x = orbitalDistance * Math.cos(angle);
@@ -294,7 +364,7 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
         containerRef.current.removeEventListener("mousemove", handleMouseMove);
       }
     };
-  }, [stars, loading, activeModes, filters, searchQuery, constellation]);
+  }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera]);
 
   const formatNumber = (num) => {
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
@@ -359,8 +429,14 @@ const StarVisualization = ({ filters, activeModes, searchQuery }) => {
           Error loading star data: {error}
         </div>
       )}
+
+      {isFreeCamera && (
+          <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-90 text-white p-2 rounded">
+            <p className="text-sm">Controls: WASD to move, Mouse to look, Shift to speed up</p>
+          </div>
+      )}
     </div>
   );
-};
+});
 
 export default StarVisualization;

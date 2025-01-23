@@ -1,21 +1,31 @@
 import React from 'react';
-import { Search, EyeIcon, SunIcon, ThermometerSun, Maximize2, Sparkles, Globe2 } from 'lucide-react';
+import { Search, EyeIcon, SunIcon, ThermometerSun, Maximize2, Sparkles, Globe2, Camera } from 'lucide-react';
 
-const Toolbar = ({ onModeChange, activeModes, onSearch }) => {
+const Toolbar = ({ onModeChange, activeModes, onSearch, onCameraToggle, isFreeCamera }) => {
   const isActive = (mode) => activeModes.includes(mode);
 
   return (
-    <div className="bg-gray-800 p-4 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <button 
-          onClick={() => onModeChange('closest')}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive('closest') ? 'bg-blue-600' : 'bg-gray-600'
-          }`}
-        >
-          <EyeIcon className="w-4 h-4" />
-          <span>Closest Visible Stars</span>
-        </button>
+      <div className="bg-gray-800 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <button
+              onClick={() => onCameraToggle()}
+              className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
+                  isFreeCamera ? 'bg-blue-600' : 'bg-gray-600'
+              }`}
+          >
+            <Camera className="w-4 h-4" />
+            <span>{isFreeCamera ? 'Center Camera' : 'Free Camera'}</span>
+          </button>
+
+          <button
+              onClick={() => onModeChange('closest')}
+              className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
+                  isActive('closest') ? 'bg-blue-600' : 'bg-gray-600'
+              }`}
+          >
+            <EyeIcon className="w-4 h-4" />
+            <span>Closest Visible Stars</span>
+          </button>
 
         <button 
           onClick={() => onModeChange('brightest')}
@@ -71,10 +81,10 @@ const Toolbar = ({ onModeChange, activeModes, onSearch }) => {
       <div className="flex items-center bg-gray-700 rounded px-3 py-2">
         <Search className="w-4 h-4 text-gray-400" />
         <input
-          type="text"
-          placeholder="Search stars or constellations..."
-          className="bg-transparent border-none text-white ml-2 focus:outline-none w-64"
-          onChange={(e) => onSearch(e.target.value)}
+            type="text"
+            placeholder="Search stars or constellations..."
+            className="bg-transparent border-none text-white ml-2 focus:outline-none w-64"
+            onChange={(e) => onSearch(e.target.value)}
         />
       </div>
     </div>
