@@ -32,13 +32,13 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     if (!isFreeCamera) return;
     console.log('Key pressed:', event.key);
     switch (event.key.toLowerCase()) {
-      case 'z': moveRef.current.forward = true; break; // Z for forward
-      case 's': moveRef.current.backward = true; break; // S for backward
-      case 'q': moveRef.current.left = true; break; // Q for left
-      case 'd': moveRef.current.right = true; break; // D for right
-      case 'arrowup': moveRef.current.up = true; break; // ArrowUp for vertical up
-      case 'arrowdown': moveRef.current.down = true; break; // ArrowDown for vertical down
-      case 'shift': speedRef.current = 100; break; // Speed up
+      case 'z': moveRef.current.forward = true; break;
+      case 's': moveRef.current.backward = true; break;
+      case 'q': moveRef.current.left = true; break;
+      case 'd': moveRef.current.right = true; break;
+      case 'arrowup': moveRef.current.up = true; break;
+      case 'arrowdown': moveRef.current.down = true; break;
+      case 'shift': speedRef.current = 100; break;
     }
   };
 
@@ -46,13 +46,13 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     if (!isFreeCamera) return;
     console.log('Key released:', event.key);
     switch (event.key.toLowerCase()) {
-      case 'z': moveRef.current.forward = false; break; // Z for forward
-      case 's': moveRef.current.backward = false; break; // S for backward
-      case 'q': moveRef.current.left = false; break; // Q for left
-      case 'd': moveRef.current.right = false; break; // D for right
-      case 'arrowup': moveRef.current.up = false; break; // ArrowUp for vertical up
-      case 'arrowdown': moveRef.current.down = false; break; // ArrowDown for vertical down
-      case 'shift': speedRef.current = 50; break; // Reset speed
+      case 'z': moveRef.current.forward = false; break;
+      case 's': moveRef.current.backward = false; break;
+      case 'q': moveRef.current.left = false; break;
+      case 'd': moveRef.current.right = false; break;
+      case 'arrowup': moveRef.current.up = false; break;
+      case 'arrowdown': moveRef.current.down = false; break;
+      case 'shift': speedRef.current = 50; break;
     }
   };
 
@@ -264,7 +264,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
     const mouse = new THREE.Vector2();
     const handleMouseMove = (event) => {
-      if (!containerRef.current || isFreeCamera) return;
+      if (!containerRef.current) return;
 
       const rect = containerRef.current.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -345,11 +345,22 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         const movementX = event.movementX || 0;
         const movementY = event.movementY || 0;
 
-        camera.rotation.y -= movementX * 0.002;
-        camera.rotation.x -= movementY * 0.002;
+        // Create a quaternion for horizontal rotation around Y axis
+        const horizontalRotation = new THREE.Quaternion();
+        horizontalRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -movementX * 0.002);
 
-        // Limit vertical rotation
-        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+        // Create a quaternion for vertical rotation around right vector
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(camera.quaternion);
+        const verticalRotation = new THREE.Quaternion();
+        verticalRotation.setFromAxisAngle(right, -movementY * 0.002);
+
+        // Apply rotations in correct order
+        camera.quaternion.multiplyQuaternions(verticalRotation, camera.quaternion);
+        camera.quaternion.multiplyQuaternions(horizontalRotation, camera.quaternion);
+
+        // Normalize to prevent accumulated errors
+        camera.quaternion.normalize();
       }
     };
 
