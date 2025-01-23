@@ -301,7 +301,7 @@ export const createSolarSystem = (scale = 2e-6) => {
   group.add(sun);
 
   // Increase base multiplier for planets
-  SOLAR_SYSTEM.planets.forEach((planet, index) => {
+  SOLAR_SYSTEM.planets.forEach((planet) => {
     const planetGeometry = new THREE.SphereGeometry(
         planet.radius * scale * 2000,  // Increased from 1000 to 2000
         32,
