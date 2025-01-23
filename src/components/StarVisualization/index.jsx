@@ -8,6 +8,7 @@ import {
     createStarField,
     filterStars,
     setupScene,
+  CONSTELLATION_CONNECTIONS
 } from "../../utils/threeHelper";
 
 const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
@@ -39,7 +40,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
     const handleKeyDown = (event) => {
         if (!isFreeCamera) return;
-        console.log('Key pressed:', event.key);
         switch (event.key.toLowerCase()) {
             case 'z': moveRef.current.forward = true; break;
             case 's': moveRef.current.backward = true; break;
@@ -55,7 +55,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
     const handleKeyUp = (event) => {
         if (!isFreeCamera) return;
-        console.log('Key released:', event.key);
         switch (event.key.toLowerCase()) {
             case 'z': moveRef.current.forward = false; break;
             case 's': moveRef.current.backward = false; break;
@@ -104,7 +103,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     toggleCamera
   }));
 
-  // Star filtering logic remains the same
   const getFilteredStars = () => {
     if (!stars || !stars.length) return [];
 
@@ -114,12 +112,26 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       filteredStars = filteredStars.filter((star) => star.id !== 0);
     }
 
-    if (activeModes.length > 0) {
-      const modeStars = activeModes
-        .filter((mode) => mode !== "solarSystem" && mode !== "constellations")
-        .map((mode) => {
-            return filterStars[mode]([...stars]);
+    // Apply mode filters first
+    if (activeModes.includes("constellations")) {
+      // Get all star IDs that are part of defined constellations
+      const validStarIds = new Set();
+      Object.values(CONSTELLATION_CONNECTIONS).forEach(connections => {
+        connections.forEach(connection => {
+          connection.forEach(id => validStarIds.add(id));
         });
+      });
+
+      // Only keep stars that are part of defined constellations
+      filteredStars = filteredStars.filter(star => validStarIds.has(star.id.toString()));
+
+      if (constellation) {
+        filteredStars = filteredStars.filter(star => star.con === constellation);
+      }
+    } else if (activeModes.length > 0) {
+      const modeStars = activeModes
+          .filter((mode) => mode !== "solarSystem")
+          .map((mode) => filterStars[mode]([...stars]));
 
       if (modeStars.length > 0) {
         const starIds = new Set();
@@ -129,40 +141,26 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
           return true;
         });
       }
-
-      if (activeModes.includes("constellations") && constellation) {
-        filteredStars = filteredStars.filter(
-          (star) => star.con === constellation
-        );
-      }
     }
 
+    // Apply basic filters
     filteredStars = filteredStars.filter((star) => {
       const temp = getStarTemperature(star.spect);
+      const relevantMagnitude = filters.magnitudeType === "apparent" ? star.mag : star.absmag;
       return (
-        star.mag <= filters.magnitude &&
-        star.dist <= filters.maxDistance &&
-        temp >= filters.minTemp
+          relevantMagnitude <= filters.magnitude &&
+          star.dist <= filters.maxDistance &&
+          temp >= filters.minTemp
       );
     });
 
-    filteredStars = filteredStars.filter((star) => {
-      const temp = getStarTemperature(star.spect);
-      const relevantMagnitude =
-        filters.magnitudeType === "apparent" ? star.mag : star.absmag;
-      return (
-        relevantMagnitude <= filters.magnitude &&
-        star.dist <= filters.maxDistance &&
-        temp >= filters.minTemp
-      );
-    });
-
+    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredStars = filteredStars.filter(
-        (star) =>
-          (star.proper && star.proper.toLowerCase().includes(query)) ||
-          (star.con && star.con.toLowerCase().includes(query))
+          (star) =>
+              (star.proper && star.proper.toLowerCase().includes(query)) ||
+              (star.con && star.con.toLowerCase().includes(query))
       );
     }
 
@@ -250,16 +248,12 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     const controls = controlsRef.current;
     const renderer = rendererRef.current;
 
-    // Check if we're specifically switching to solar system mode
-    const isNewSolarSystemMode =
-        activeModes.includes('solarSystem') &&
-        activeModes.length === 1 &&
-        !lastModes.includes('solarSystem');
+    const isNewSolarSystemMode = activeModes.includes('solarSystem') &&
+        activeModes.length === 1 && !lastModes.includes('solarSystem');
 
-    // Update last modes for next comparison
     setLastModes(activeModes);
 
-    // Clear existing objects
+    // Clear scene
     while(scene.children.length > 0) {
       scene.remove(scene.children[0]);
     }
@@ -324,20 +318,23 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       }
     };
 
-    // Add objects to scene
     const filteredStars = getFilteredStars();
     if (filteredStars.length > 0) {
       const starField = createStarField(filteredStars, [], constellation);
       scene.add(starField);
 
-      if (activeModes.includes("constellations") && constellation) {
-        const constellationLines = createConstellationLines(
-            filteredStars,
-            constellation
-        );
-        if (constellationLines) {
-          scene.add(constellationLines);
-        }
+      // Only draw constellation lines if constellation mode is active
+      if (activeModes.includes("constellations")) {
+        const constellations = [...new Set(filteredStars.map(star => star.con))];
+        constellations.forEach(con => {
+          if (con && CONSTELLATION_CONNECTIONS[con]) {
+            const constellationLines = createConstellationLines(filteredStars, con);
+            if (constellationLines) {
+              constellationLines.userData.type = 'constellation';
+              scene.add(constellationLines);
+            }
+          }
+        });
       }
     }
 
@@ -357,21 +354,17 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         const movementX = event.movementX || 0;
         const movementY = event.movementY || 0;
 
-        // Create a quaternion for horizontal rotation around Y axis
         const horizontalRotation = new THREE.Quaternion();
         horizontalRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -movementX * 0.002);
 
-        // Create a quaternion for vertical rotation around right vector
         const right = new THREE.Vector3(1, 0, 0);
         right.applyQuaternion(camera.quaternion);
         const verticalRotation = new THREE.Quaternion();
         verticalRotation.setFromAxisAngle(right, -movementY * 0.002);
 
-        // Apply rotations in correct order
         camera.quaternion.multiplyQuaternions(verticalRotation, camera.quaternion);
         camera.quaternion.multiplyQuaternions(horizontalRotation, camera.quaternion);
 
-        // Normalize to prevent accumulated errors
         camera.quaternion.normalize();
       }
     };
@@ -393,29 +386,25 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         camera.getWorldDirection(sideVector);
         sideVector.cross(camera.up);
 
-          const { forward, backward, left, right, up, down, rotateLeft, rotateRight } = moveRef.current;
-          const speed = speedRef.current;
+        const { forward, backward, left, right, up, down, rotateLeft, rotateRight } = moveRef.current;
+        const speed = speedRef.current;
 
-          if (forward) camera.position.addScaledVector(direction, speed);
-          if (backward) camera.position.addScaledVector(direction, -speed);
-          if (left) camera.position.addScaledVector(sideVector, -speed);
-          if (right) camera.position.addScaledVector(sideVector, speed);
-          if (forward) camera.position.addScaledVector(direction, speed);
-          if (backward) camera.position.addScaledVector(direction, -speed);
-          if (left) camera.position.addScaledVector(sideVector, -speed);
-          if (right) camera.position.addScaledVector(sideVector, speed);
-          if (up) camera.position.y += speed;
-          if (down) camera.position.y -= speed;
-          if (rotateLeft) {
-              const rotation = new THREE.Quaternion();
-              rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.03);
-              camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
-          }
-          if (rotateRight) {
-              const rotation = new THREE.Quaternion();
-              rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.03);
-              camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
-          }
+        if (forward) camera.position.addScaledVector(direction, speed);
+        if (backward) camera.position.addScaledVector(direction, -speed);
+        if (left) camera.position.addScaledVector(sideVector, -speed);
+        if (right) camera.position.addScaledVector(sideVector, speed);
+        if (up) camera.position.y += speed;
+        if (down) camera.position.y -= speed;
+        if (rotateLeft) {
+          const rotation = new THREE.Quaternion();
+          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.03);
+          camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
+        }
+        if (rotateRight) {
+          const rotation = new THREE.Quaternion();
+          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.03);
+          camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
+        }
       } else {
         orbitControlsRef.current?.update();
       }
