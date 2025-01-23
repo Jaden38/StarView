@@ -12,6 +12,7 @@ import {
 
 const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
   const containerRef = useRef();
+  const isMouseDownRef = useRef(false);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
@@ -29,36 +30,47 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
   const handleKeyDown = (event) => {
     if (!isFreeCamera) return;
-    switch (event.code) {
-      case 'KeyW': moveRef.current.forward = true; break;
-      case 'KeyS': moveRef.current.backward = true; break;
-      case 'KeyA': moveRef.current.left = true; break;
-      case 'KeyD': moveRef.current.right = true; break;
-      case 'ShiftLeft': speedRef.current = 100; break;
+    console.log('Key pressed:', event.key);
+    switch (event.key.toLowerCase()) {
+      case 'z': moveRef.current.forward = true; break; // Z for forward
+      case 's': moveRef.current.backward = true; break; // S for backward
+      case 'q': moveRef.current.left = true; break; // Q for left
+      case 'd': moveRef.current.right = true; break; // D for right
+      case 'arrowup': moveRef.current.up = true; break; // ArrowUp for vertical up
+      case 'arrowdown': moveRef.current.down = true; break; // ArrowDown for vertical down
+      case 'shift': speedRef.current = 100; break; // Speed up
     }
   };
+
   const handleKeyUp = (event) => {
     if (!isFreeCamera) return;
-    switch (event.code) {
-      case 'KeyW': moveRef.current.forward = false; break;
-      case 'KeyS': moveRef.current.backward = false; break;
-      case 'KeyA': moveRef.current.left = false; break;
-      case 'KeyD': moveRef.current.right = false; break;
-      case 'ShiftLeft': speedRef.current = 50; break;
+    console.log('Key released:', event.key);
+    switch (event.key.toLowerCase()) {
+      case 'z': moveRef.current.forward = false; break; // Z for forward
+      case 's': moveRef.current.backward = false; break; // S for backward
+      case 'q': moveRef.current.left = false; break; // Q for left
+      case 'd': moveRef.current.right = false; break; // D for right
+      case 'arrowup': moveRef.current.up = false; break; // ArrowUp for vertical up
+      case 'arrowdown': moveRef.current.down = false; break; // ArrowDown for vertical down
+      case 'shift': speedRef.current = 50; break; // Reset speed
     }
+  };
+
+  const handleMouseDown = () => {
+    isMouseDownRef.current = true;
+  };
+
+  const handleMouseUp = () => {
+    isMouseDownRef.current = false;
   };
 
   const toggleCamera = () => {
     if (!cameraRef.current) return;
 
+    const newIsFreeCamera = !isFreeCamera;
     onCameraToggle();
 
-    if (!isFreeCamera) {
-      orbitControlsRef.current.enabled = false;
-      pointerControlsRef.current.lock();
-      document.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('keyup', handleKeyUp);
-    } else {
+    if (!newIsFreeCamera) {
       pointerControlsRef.current.unlock();
       orbitControlsRef.current.enabled = true;
       document.removeEventListener('keydown', handleKeyDown);
@@ -68,6 +80,10 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       cameraRef.current.position.set(0, 2000, 4000);
       cameraRef.current.lookAt(0, 0, 0);
       orbitControlsRef.current.target.set(0, 0, 0);
+    } else {
+      orbitControlsRef.current.enabled = false;
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
     }
   };
 
@@ -162,30 +178,21 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
     const { scene, camera, renderer, controls: orbitControls, raycaster, cleanup } = setupScene(containerRef.current);
 
-
     sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
     orbitControlsRef.current = orbitControls;
     controlsRef.current = orbitControls;
     pointerControlsRef.current = new PointerLockControls(camera, containerRef.current);
-
-
+    pointerControlsRef.current.pointerSpeed = 0.5; // Reduce mouse sensitivity
 
     const handleResize = () => {
       if (!containerRef.current || !cameraRef.current || !rendererRef.current)
         return;
 
-      const camera = cameraRef.current;
-      const renderer = rendererRef.current;
-
-      camera.aspect =
-        containerRef.current.clientWidth / containerRef.current.clientHeight;
+      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(
-        containerRef.current.clientWidth,
-        containerRef.current.clientHeight
-      );
+      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     };
 
     window.addEventListener("resize", handleResize);
@@ -196,6 +203,31 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       cleanup();
     };
   }, [loading]);
+
+  // Free camera effect
+  useEffect(() => {
+    if (!cameraRef.current) return;
+
+    if (isFreeCamera) {
+      orbitControlsRef.current.enabled = false;
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+    } else {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+      orbitControlsRef.current.enabled = true;
+
+      // Reset camera position
+      cameraRef.current.position.set(0, 2000, 4000);
+      cameraRef.current.lookAt(0, 0, 0);
+      orbitControlsRef.current.target.set(0, 0, 0);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isFreeCamera]);
 
   // Scene update effect
   useEffect(() => {
@@ -308,7 +340,23 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       }
     }
 
+    const handleMouseMovement = (event) => {
+      if (isFreeCamera && isMouseDownRef.current) {
+        const movementX = event.movementX || 0;
+        const movementY = event.movementY || 0;
+
+        camera.rotation.y -= movementX * 0.002;
+        camera.rotation.x -= movementY * 0.002;
+
+        // Limit vertical rotation
+        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+      }
+    };
+
+    containerRef.current.addEventListener("mousedown", handleMouseDown);
+    containerRef.current.addEventListener("mouseup", handleMouseUp);
     containerRef.current.addEventListener("mousemove", handleMouseMove);
+    containerRef.current.addEventListener("mousemove", handleMouseMovement);
 
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -322,13 +370,19 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         camera.getWorldDirection(sideVector);
         sideVector.cross(camera.up);
 
-        const { forward, backward, left, right } = moveRef.current;
+        const { forward, backward, left, right, up, down } = moveRef.current;
         const speed = speedRef.current;
 
         if (forward) camera.position.addScaledVector(direction, speed);
         if (backward) camera.position.addScaledVector(direction, -speed);
         if (left) camera.position.addScaledVector(sideVector, -speed);
         if (right) camera.position.addScaledVector(sideVector, speed);
+        if (forward) camera.position.addScaledVector(direction, speed);
+        if (backward) camera.position.addScaledVector(direction, -speed);
+        if (left) camera.position.addScaledVector(sideVector, -speed);
+        if (right) camera.position.addScaledVector(sideVector, speed);
+        if (up) camera.position.y += speed; // Move vertically up
+        if (down) camera.position.y -= speed; // Move vertically down
       } else {
         orbitControlsRef.current?.update();
       }
@@ -362,6 +416,9 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       cancelAnimationFrame(animationFrameRef.current);
       if (containerRef.current) {
         containerRef.current.removeEventListener("mousemove", handleMouseMove);
+        containerRef.current.removeEventListener("mousemove", handleMouseMovement);
+        containerRef.current.removeEventListener("mousedown", handleMouseDown);
+        containerRef.current.removeEventListener("mouseup", handleMouseUp);
       }
     };
   }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera]);
@@ -432,7 +489,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
       {isFreeCamera && (
           <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-90 text-white p-2 rounded">
-            <p className="text-sm">Controls: WASD to move, Mouse to look, Shift to speed up</p>
+            <p className="text-sm">Controls: Arrows to move, Mouse to look, Shift to speed up</p>
           </div>
       )}
     </div>
