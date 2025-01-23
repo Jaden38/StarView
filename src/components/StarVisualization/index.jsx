@@ -2,6 +2,7 @@ import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} fro
 import * as THREE from "three";
 import useStarData from "../../hooks/useStarData";
 import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls';
+import CameraControls from './CameraControls';
 import {
     createConstellationLines,
     createSolarSystem,
@@ -508,20 +509,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
           Error loading star data: {error}
         </div>
       )}
-
-      {isFreeCamera && (
-          <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-70 text-white p-2 rounded">
-            <div className="text-sm">
-              <p>Controls:</p>
-              <ul className="list-disc pl-4">
-                <li>ZQSD: Move forward, backward, left, and right</li>
-                <li>Arrow keys: Vertical (up/down) and rotational movement</li>
-                <li>Mouse: Look around</li>
-                <li>Shift: Speed up</li>
-              </ul>
-            </div>
-          </div>
-      )}
+      <CameraControls isFreeCamera={isFreeCamera} />
     </div>
   );
 });
