@@ -6,12 +6,12 @@ import StarInfoPanel from './StarInfoPanel';
 import ObjectInfoPanel from './ObjectInfoPanel';
 import ErrorMessage from './ErrorMessage';
 import useCameraControls from '../../hooks/useCameraControls';
+import useStarFilter from '../../hooks/useStarFilter';
 import {
   CONSTELLATION_CONNECTIONS,
   createConstellationLines,
   createSolarSystem,
   createStarField,
-  filterStars,
   setupScene
 } from "../../utils/threeHelper";
 
@@ -36,6 +36,8 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       orbitControlsRef.current
   );
 
+  const filteredStars = useStarFilter(stars, filters, activeModes, searchQuery, constellation);
+
   const toggleCamera = () => {
     if (!cameraRef.current) return;
     onCameraToggle();
@@ -44,75 +46,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
   useImperativeHandle(ref, () => ({
     toggleCamera
   }));
-
-  const getFilteredStars = () => {
-    if (!stars || !stars.length) return [];
-
-    let filteredStars = [...stars];
-
-    if (activeModes.includes("solarSystem")) {
-      filteredStars = filteredStars.filter((star) => star.id !== 0);
-    }
-
-    if (activeModes.includes("constellations")) {
-      const validStarIds = new Set();
-      Object.values(CONSTELLATION_CONNECTIONS).forEach(connections => {
-        connections.forEach(connection => {
-          connection.forEach(id => validStarIds.add(id));
-        });
-      });
-
-      filteredStars = filteredStars.filter(star => validStarIds.has(star.id.toString()));
-
-      if (constellation) {
-        filteredStars = filteredStars.filter(star => star.con === constellation);
-      }
-    } else if (activeModes.length > 0) {
-      const modeStars = activeModes
-          .filter((mode) => mode !== "solarSystem")
-          .map((mode) => filterStars[mode]([...stars]));
-
-      if (modeStars.length > 0) {
-        const starIds = new Set();
-        filteredStars = modeStars.flat().filter((star) => {
-          if (starIds.has(star.id)) return false;
-          starIds.add(star.id);
-          return true;
-        });
-      }
-    }
-
-    filteredStars = filteredStars.filter((star) => {
-      const temp = getStarTemperature(star.spect);
-      const relevantMagnitude = filters.magnitudeType === "apparent" ? star.mag : star.absmag;
-      return (
-          relevantMagnitude <= filters.magnitude &&
-          star.dist <= filters.maxDistance &&
-          temp >= filters.minTemp
-      );
-    });
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filteredStars = filteredStars.filter(
-          (star) =>
-              (star.proper && star.proper.toLowerCase().includes(query)) ||
-              (star.con && star.con.toLowerCase().includes(query))
-      );
-    }
-
-    return filteredStars;
-  };
-
-  const getStarTemperature = (spect) => {
-    if (!spect) return 5000;
-    const type = spect[0];
-    const temps = {
-      O: 30000, B: 20000, A: 9000,
-      F: 7000, G: 5500, K: 4000, M: 3000,
-    };
-    return temps[type] || 5000;
-  };
 
   useEffect(() => {
     if (!containerRef.current || loading) return;
@@ -216,7 +149,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       }
     };
 
-    const filteredStars = getFilteredStars();
     if (filteredStars.length > 0) {
       const starField = createStarField(filteredStars, [], constellation);
       scene.add(starField);
@@ -288,7 +220,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         containerRef.current.removeEventListener("mousemove", handleMouseMove);
       }
     };
-  }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera, updateCameraPosition]);
+  }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera, updateCameraPosition, filteredStars]);
 
   return (
       <div className="relative w-full h-full">
