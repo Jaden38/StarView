@@ -467,7 +467,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       <div ref={containerRef} className="absolute inset-0" />
 
       {selectedStar && (
-        <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
+        <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-70 text-white p-4 rounded shadow-lg">
           <h3 className="font-bold text-xl">
             {selectedStar.proper || `Star ${selectedStar.id}`}
           </h3>
@@ -521,7 +521,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       )}
 
       {isFreeCamera && (
-          <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-90 text-white p-2 rounded">
+          <div className="absolute top-20 left-4 bg-gray-800 bg-opacity-70 text-white p-2 rounded">
             <div className="text-sm">
               <p>Controls:</p>
               <ul className="list-disc pl-4">
