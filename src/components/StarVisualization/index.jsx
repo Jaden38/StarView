@@ -1,13 +1,13 @@
 import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import * as THREE from "three";
 import useStarData from "../../hooks/useStarData";
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls';
 import {
-  createConstellationLines,
-  createSolarSystem,
-  createStarField,
-  filterStars,
-  setupScene,
+    createConstellationLines,
+    createSolarSystem,
+    createStarField,
+    filterStars,
+    setupScene,
 } from "../../utils/threeHelper";
 
 const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
@@ -19,7 +19,16 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
   const controlsRef = useRef(null);
   const orbitControlsRef = useRef(null);
   const pointerControlsRef = useRef(null);
-  const moveRef = useRef({ forward: false, backward: false, left: false, right: false });
+  const moveRef = useRef({
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    rotateLeft: false,
+    rotateRight: false
+  });
   const speedRef = useRef(50);
   const animationFrameRef = useRef(null);
   const { stars, loading, error } = useStarData();
@@ -28,33 +37,37 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
   const [constellation, setConstellation] = useState(null);
   const [lastModes, setLastModes] = useState([]);
 
-  const handleKeyDown = (event) => {
-    if (!isFreeCamera) return;
-    console.log('Key pressed:', event.key);
-    switch (event.key.toLowerCase()) {
-      case 'z': moveRef.current.forward = true; break;
-      case 's': moveRef.current.backward = true; break;
-      case 'q': moveRef.current.left = true; break;
-      case 'd': moveRef.current.right = true; break;
-      case 'arrowup': moveRef.current.up = true; break;
-      case 'arrowdown': moveRef.current.down = true; break;
-      case 'shift': speedRef.current = 100; break;
-    }
-  };
+    const handleKeyDown = (event) => {
+        if (!isFreeCamera) return;
+        console.log('Key pressed:', event.key);
+        switch (event.key.toLowerCase()) {
+            case 'z': moveRef.current.forward = true; break;
+            case 's': moveRef.current.backward = true; break;
+            case 'q': moveRef.current.left = true; break;
+            case 'd': moveRef.current.right = true; break;
+            case 'arrowup': moveRef.current.up = true; break;
+            case 'arrowdown': moveRef.current.down = true; break;
+            case 'arrowleft': moveRef.current.rotateLeft = true; break;
+            case 'arrowright': moveRef.current.rotateRight = true; break;
+            case 'shift': speedRef.current = 100; break;
+        }
+    };
 
-  const handleKeyUp = (event) => {
-    if (!isFreeCamera) return;
-    console.log('Key released:', event.key);
-    switch (event.key.toLowerCase()) {
-      case 'z': moveRef.current.forward = false; break;
-      case 's': moveRef.current.backward = false; break;
-      case 'q': moveRef.current.left = false; break;
-      case 'd': moveRef.current.right = false; break;
-      case 'arrowup': moveRef.current.up = false; break;
-      case 'arrowdown': moveRef.current.down = false; break;
-      case 'shift': speedRef.current = 50; break;
-    }
-  };
+    const handleKeyUp = (event) => {
+        if (!isFreeCamera) return;
+        console.log('Key released:', event.key);
+        switch (event.key.toLowerCase()) {
+            case 'z': moveRef.current.forward = false; break;
+            case 's': moveRef.current.backward = false; break;
+            case 'q': moveRef.current.left = false; break;
+            case 'd': moveRef.current.right = false; break;
+            case 'arrowup': moveRef.current.up = false; break;
+            case 'arrowdown': moveRef.current.down = false; break;
+            case 'arrowleft': moveRef.current.rotateLeft = false; break;
+            case 'arrowright': moveRef.current.rotateRight = false; break;
+            case 'shift': speedRef.current = 50; break;
+        }
+    };
 
   const handleMouseDown = () => {
     isMouseDownRef.current = true;
@@ -105,8 +118,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       const modeStars = activeModes
         .filter((mode) => mode !== "solarSystem" && mode !== "constellations")
         .map((mode) => {
-          const modeFilteredStars = filterStars[mode]([...stars]);
-          return modeFilteredStars;
+            return filterStars[mode]([...stars]);
         });
 
       if (modeStars.length > 0) {
@@ -381,19 +393,29 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         camera.getWorldDirection(sideVector);
         sideVector.cross(camera.up);
 
-        const { forward, backward, left, right, up, down } = moveRef.current;
-        const speed = speedRef.current;
+          const { forward, backward, left, right, up, down, rotateLeft, rotateRight } = moveRef.current;
+          const speed = speedRef.current;
 
-        if (forward) camera.position.addScaledVector(direction, speed);
-        if (backward) camera.position.addScaledVector(direction, -speed);
-        if (left) camera.position.addScaledVector(sideVector, -speed);
-        if (right) camera.position.addScaledVector(sideVector, speed);
-        if (forward) camera.position.addScaledVector(direction, speed);
-        if (backward) camera.position.addScaledVector(direction, -speed);
-        if (left) camera.position.addScaledVector(sideVector, -speed);
-        if (right) camera.position.addScaledVector(sideVector, speed);
-        if (up) camera.position.y += speed; // Move vertically up
-        if (down) camera.position.y -= speed; // Move vertically down
+          if (forward) camera.position.addScaledVector(direction, speed);
+          if (backward) camera.position.addScaledVector(direction, -speed);
+          if (left) camera.position.addScaledVector(sideVector, -speed);
+          if (right) camera.position.addScaledVector(sideVector, speed);
+          if (forward) camera.position.addScaledVector(direction, speed);
+          if (backward) camera.position.addScaledVector(direction, -speed);
+          if (left) camera.position.addScaledVector(sideVector, -speed);
+          if (right) camera.position.addScaledVector(sideVector, speed);
+          if (up) camera.position.y += speed;
+          if (down) camera.position.y -= speed;
+          if (rotateLeft) {
+              const rotation = new THREE.Quaternion();
+              rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.03);
+              camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
+          }
+          if (rotateRight) {
+              const rotation = new THREE.Quaternion();
+              rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.03);
+              camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
+          }
       } else {
         orbitControlsRef.current?.update();
       }
