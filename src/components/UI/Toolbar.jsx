@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, EyeIcon, SunIcon, ThermometerSun, Maximize2, Sparkles, Globe2, Camera } from 'lucide-react';
+import {Camera, EyeIcon, Globe2, Maximize2, Search, Sparkles, ThermometerSun} from 'lucide-react';
 
 const Toolbar = ({ onModeChange, activeModes, onSearch, onCameraToggle, isFreeCamera }) => {
   const isActive = (mode) => activeModes.includes(mode);

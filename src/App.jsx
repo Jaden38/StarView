@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, {useRef, useState} from 'react';
 import StarVisualization from './components/StarVisualization';
 import Sidebar from './components/UI/Sidebar';
 import Toolbar from './components/UI/Toolbar';

@@ -1,37 +1,27 @@
 import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import * as THREE from "three";
 import useStarData from "../../hooks/useStarData";
-import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls';
 import CameraControls from './CameraControls';
+import StarInfoPanel from './StarInfoPanel';
+import ObjectInfoPanel from './ObjectInfoPanel';
+import ErrorMessage from './ErrorMessage';
+import useCameraControls from '../../hooks/useCameraControls';
 import {
-    createConstellationLines,
-    createSolarSystem,
-    createStarField,
-    filterStars,
-    setupScene,
-  CONSTELLATION_CONNECTIONS
+  CONSTELLATION_CONNECTIONS,
+  createConstellationLines,
+  createSolarSystem,
+  createStarField,
+  filterStars,
+  setupScene
 } from "../../utils/threeHelper";
 
 const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
   const containerRef = useRef();
-  const isMouseDownRef = useRef(false);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
   const orbitControlsRef = useRef(null);
-  const pointerControlsRef = useRef(null);
-  const moveRef = useRef({
-    forward: false,
-    backward: false,
-    left: false,
-    right: false,
-    up: false,
-    down: false,
-    rotateLeft: false,
-    rotateRight: false
-  });
-  const speedRef = useRef(50);
   const animationFrameRef = useRef(null);
   const { stars, loading, error } = useStarData();
   const [selectedStar, setSelectedStar] = useState(null);
@@ -39,65 +29,16 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
   const [constellation, setConstellation] = useState(null);
   const [lastModes, setLastModes] = useState([]);
 
-    const handleKeyDown = (event) => {
-        if (!isFreeCamera) return;
-        switch (event.key.toLowerCase()) {
-            case 'z': moveRef.current.forward = true; break;
-            case 's': moveRef.current.backward = true; break;
-            case 'q': moveRef.current.left = true; break;
-            case 'd': moveRef.current.right = true; break;
-            case 'arrowup': moveRef.current.up = true; break;
-            case 'arrowdown': moveRef.current.down = true; break;
-            case 'arrowleft': moveRef.current.rotateLeft = true; break;
-            case 'arrowright': moveRef.current.rotateRight = true; break;
-            case 'shift': speedRef.current = 100; break;
-        }
-    };
-
-    const handleKeyUp = (event) => {
-        if (!isFreeCamera) return;
-        switch (event.key.toLowerCase()) {
-            case 'z': moveRef.current.forward = false; break;
-            case 's': moveRef.current.backward = false; break;
-            case 'q': moveRef.current.left = false; break;
-            case 'd': moveRef.current.right = false; break;
-            case 'arrowup': moveRef.current.up = false; break;
-            case 'arrowdown': moveRef.current.down = false; break;
-            case 'arrowleft': moveRef.current.rotateLeft = false; break;
-            case 'arrowright': moveRef.current.rotateRight = false; break;
-            case 'shift': speedRef.current = 50; break;
-        }
-    };
-
-  const handleMouseDown = () => {
-    isMouseDownRef.current = true;
-  };
-
-  const handleMouseUp = () => {
-    isMouseDownRef.current = false;
-  };
+  const { updateCameraPosition } = useCameraControls(
+      cameraRef.current,
+      containerRef,
+      isFreeCamera,
+      orbitControlsRef.current
+  );
 
   const toggleCamera = () => {
     if (!cameraRef.current) return;
-
-    const newIsFreeCamera = !isFreeCamera;
     onCameraToggle();
-
-    if (!newIsFreeCamera) {
-      pointerControlsRef.current.unlock();
-      orbitControlsRef.current.enabled = true;
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-
-      // Reset camera position
-      cameraRef.current.position.set(0, 2000, 4000);
-      cameraRef.current.lookAt(0, 0, 0);
-      orbitControlsRef.current.target.set(0, 0, 0);
-    } else {
-      orbitControlsRef.current.enabled = false;
-      document.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('keyup', handleKeyUp);
-    }
   };
 
   useImperativeHandle(ref, () => ({
@@ -113,9 +54,7 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       filteredStars = filteredStars.filter((star) => star.id !== 0);
     }
 
-    // Apply mode filters first
     if (activeModes.includes("constellations")) {
-      // Get all star IDs that are part of defined constellations
       const validStarIds = new Set();
       Object.values(CONSTELLATION_CONNECTIONS).forEach(connections => {
         connections.forEach(connection => {
@@ -123,7 +62,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         });
       });
 
-      // Only keep stars that are part of defined constellations
       filteredStars = filteredStars.filter(star => validStarIds.has(star.id.toString()));
 
       if (constellation) {
@@ -144,7 +82,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       }
     }
 
-    // Apply basic filters
     filteredStars = filteredStars.filter((star) => {
       const temp = getStarTemperature(star.spect);
       const relevantMagnitude = filters.magnitudeType === "apparent" ? star.mag : star.absmag;
@@ -155,7 +92,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       );
     });
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredStars = filteredStars.filter(
@@ -172,34 +108,25 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     if (!spect) return 5000;
     const type = spect[0];
     const temps = {
-      O: 30000,
-      B: 20000,
-      A: 9000,
-      F: 7000,
-      G: 5500,
-      K: 4000,
-      M: 3000,
+      O: 30000, B: 20000, A: 9000,
+      F: 7000, G: 5500, K: 4000, M: 3000,
     };
     return temps[type] || 5000;
   };
 
-  // Initial setup effect - runs once
   useEffect(() => {
     if (!containerRef.current || loading) return;
 
-    const { scene, camera, renderer, controls: orbitControls, raycaster, cleanup } = setupScene(containerRef.current);
+    const { scene, camera, renderer, controls: orbitControls, cleanup } = setupScene(containerRef.current);
 
     sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
     orbitControlsRef.current = orbitControls;
     controlsRef.current = orbitControls;
-    pointerControlsRef.current = new PointerLockControls(camera, containerRef.current);
-    pointerControlsRef.current.pointerSpeed = 0.5; // Reduce mouse sensitivity
 
     const handleResize = () => {
-      if (!containerRef.current || !cameraRef.current || !rendererRef.current)
-        return;
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
 
       camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
       camera.updateProjectionMatrix();
@@ -215,32 +142,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
     };
   }, [loading]);
 
-  // Free camera effect
-  useEffect(() => {
-    if (!cameraRef.current) return;
-
-    if (isFreeCamera) {
-      orbitControlsRef.current.enabled = false;
-      document.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('keyup', handleKeyUp);
-    } else {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-      orbitControlsRef.current.enabled = true;
-
-      // Reset camera position
-      cameraRef.current.position.set(0, 2000, 4000);
-      cameraRef.current.lookAt(0, 0, 0);
-      orbitControlsRef.current.target.set(0, 0, 0);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [isFreeCamera]);
-
-  // Scene update effect
   useEffect(() => {
     if (!sceneRef.current || !cameraRef.current || !controlsRef.current || loading) return;
 
@@ -254,12 +155,10 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
     setLastModes(activeModes);
 
-    // Clear scene
     while(scene.children.length > 0) {
       scene.remove(scene.children[0]);
     }
 
-    // Add lights
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -279,7 +178,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
 
       raycaster.setFromCamera(mouse, camera);
 
-      // Handle solar system interactions
       if (activeModes.includes("solarSystem")) {
         const solarSystem = scene.children.find(
             (child) => child.userData.type === "solarSystem"
@@ -299,7 +197,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
         }
       }
 
-      // Handle star interactions
       const starField = scene.children.find(
           (child) => child instanceof THREE.Points
       );
@@ -324,7 +221,6 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       const starField = createStarField(filteredStars, [], constellation);
       scene.add(starField);
 
-      // Only draw constellation lines if constellation mode is active
       if (activeModes.includes("constellations")) {
         const constellations = [...new Set(filteredStars.map(star => star.con))];
         constellations.forEach(con => {
@@ -350,62 +246,13 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       }
     }
 
-    const handleMouseMovement = (event) => {
-      if (isFreeCamera && isMouseDownRef.current) {
-        const movementX = event.movementX || 0;
-        const movementY = event.movementY || 0;
-
-        const horizontalRotation = new THREE.Quaternion();
-        horizontalRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -movementX * 0.002);
-
-        const right = new THREE.Vector3(1, 0, 0);
-        right.applyQuaternion(camera.quaternion);
-        const verticalRotation = new THREE.Quaternion();
-        verticalRotation.setFromAxisAngle(right, -movementY * 0.002);
-
-        camera.quaternion.multiplyQuaternions(verticalRotation, camera.quaternion);
-        camera.quaternion.multiplyQuaternions(horizontalRotation, camera.quaternion);
-
-        camera.quaternion.normalize();
-      }
-    };
-
-    containerRef.current.addEventListener("mousedown", handleMouseDown);
-    containerRef.current.addEventListener("mouseup", handleMouseUp);
     containerRef.current.addEventListener("mousemove", handleMouseMove);
-    containerRef.current.addEventListener("mousemove", handleMouseMovement);
 
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
 
       if (isFreeCamera) {
-        const camera = cameraRef.current;
-        const direction = new THREE.Vector3();
-        const sideVector = new THREE.Vector3();
-
-        camera.getWorldDirection(direction);
-        camera.getWorldDirection(sideVector);
-        sideVector.cross(camera.up);
-
-        const { forward, backward, left, right, up, down, rotateLeft, rotateRight } = moveRef.current;
-        const speed = speedRef.current;
-
-        if (forward) camera.position.addScaledVector(direction, speed);
-        if (backward) camera.position.addScaledVector(direction, -speed);
-        if (left) camera.position.addScaledVector(sideVector, -speed);
-        if (right) camera.position.addScaledVector(sideVector, speed);
-        if (up) camera.position.y += speed;
-        if (down) camera.position.y -= speed;
-        if (rotateLeft) {
-          const rotation = new THREE.Quaternion();
-          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.03);
-          camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
-        }
-        if (rotateRight) {
-          const rotation = new THREE.Quaternion();
-          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.03);
-          camera.quaternion.multiplyQuaternions(rotation, camera.quaternion);
-        }
+        updateCameraPosition();
       } else {
         orbitControlsRef.current?.update();
       }
@@ -439,78 +286,18 @@ const StarVisualization = forwardRef(({ filters, activeModes, searchQuery, isFre
       cancelAnimationFrame(animationFrameRef.current);
       if (containerRef.current) {
         containerRef.current.removeEventListener("mousemove", handleMouseMove);
-        containerRef.current.removeEventListener("mousemove", handleMouseMovement);
-        containerRef.current.removeEventListener("mousedown", handleMouseDown);
-        containerRef.current.removeEventListener("mouseup", handleMouseUp);
       }
     };
-  }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera]);
-
-  const formatNumber = (num) => {
-    if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
-    if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
-    return num.toFixed(1);
-  };
+  }, [stars, loading, activeModes, filters, searchQuery, constellation, isFreeCamera, updateCameraPosition]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="absolute inset-0" />
-
-      {selectedStar && (
-        <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-70 text-white p-4 rounded shadow-lg">
-          <h3 className="font-bold text-xl">
-            {selectedStar.proper || `Star ${selectedStar.id}`}
-          </h3>
-          <div className="space-y-1 mt-2">
-            <p>Constellation: {selectedStar.con || "Unknown"}</p>
-            <p>Distance: {selectedStar.dist.toFixed(2)} parsecs</p>
-            <p>Magnitude: {selectedStar.mag.toFixed(2)}</p>
-            <p>Spectral Type: {selectedStar.spect || "Unknown"}</p>
-            {selectedStar.lum && (
-              <p>Luminosity: {selectedStar.lum.toFixed(2)} × Sun</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {selectedObject && (
-        <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
-          <h3 className="font-bold text-xl">{selectedObject.name}</h3>
-          <div className="space-y-1 mt-2">
-            <p>
-              Type: {selectedObject.objectType === "sun" ? "Star" : "Planet"}
-            </p>
-            {selectedObject.objectType === "sun" ? (
-              <>
-                <p>Spectral Type: {selectedObject.type}</p>
-                <p>Temperature: {formatNumber(selectedObject.temperature)}K</p>
-                <p>Radius: {formatNumber(selectedObject.radius)} km</p>
-                <p>Mass: {selectedObject.mass} solar masses</p>
-              </>
-            ) : (
-              <>
-                <p>
-                  Distance from Sun:{" "}
-                  {formatNumber(selectedObject.distance / 1e6)} million km
-                </p>
-                <p>Temperature: {selectedObject.temperature}K</p>
-                <p>Radius: {formatNumber(selectedObject.radius)} km</p>
-                <p>Mass: {selectedObject.mass} Earth masses</p>
-                <p>Orbital Period: {selectedObject.orbitalPeriod} Earth days</p>
-                <p>Moons: {selectedObject.moons}</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded">
-          Error loading star data: {error}
-        </div>
-      )}
-      <CameraControls isFreeCamera={isFreeCamera} />
-    </div>
+      <div className="relative w-full h-full">
+        <div ref={containerRef} className="absolute inset-0" />
+        <StarInfoPanel selectedStar={selectedStar} />
+        <ObjectInfoPanel selectedObject={selectedObject} />
+        <ErrorMessage error={error} />
+        <CameraControls isFreeCamera={isFreeCamera} />
+      </div>
   );
 });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Star, Thermometer } from 'lucide-react';
+import {Sliders, Star, Thermometer} from 'lucide-react';
 
 const Sidebar = ({ filters, onFilterChange }) => {
   return (
