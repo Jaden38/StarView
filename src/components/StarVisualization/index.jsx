@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import PropTypes from "prop-types";
 import * as THREE from "three";
 import useStarData from "../../hooks/useStarData";
 import CameraControls from "./CameraControls";
@@ -286,5 +287,13 @@ const StarVisualization = forwardRef(
     );
   }
 );
+
+StarVisualization.propTypes = {
+  filters: PropTypes.object.isRequired,
+  activeModes: PropTypes.arrayOf(PropTypes.string).isRequired,
+  searchQuery: PropTypes.string.isRequired,
+  isFreeCamera: PropTypes.bool.isRequired,
+  onCameraToggle: PropTypes.func.isRequired,
+};
 
 export default StarVisualization;

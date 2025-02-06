@@ -255,7 +255,7 @@ export const createStarField = (
 
 export const createConstellationLines = (stars, constellationAbbreviation) => {
   const connections = CONSTELLATION_CONNECTIONS[constellationAbbreviation];
-  if (!connections || !connections.length) return null;
+  if (!connections?.length) return null;
 
   const geometry = new THREE.BufferGeometry();
   const positions = [];

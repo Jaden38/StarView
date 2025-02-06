@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const ErrorMessage = ({ error }) => {
   if (!error) return null;
@@ -8,6 +9,10 @@ const ErrorMessage = ({ error }) => {
       Error loading star data: {error}
     </div>
   );
+};
+
+ErrorMessage.propTypes = {
+  error: PropTypes.string.isRequired,
 };
 
 export default ErrorMessage;

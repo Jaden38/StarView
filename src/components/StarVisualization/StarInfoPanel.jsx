@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const StarInfoPanel = ({ selectedStar }) => {
   if (!selectedStar) return null;
@@ -19,6 +20,18 @@ const StarInfoPanel = ({ selectedStar }) => {
       </div>
     </div>
   );
+};
+
+StarInfoPanel.propTypes = {
+  selectedStar: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    proper: PropTypes.string,
+    con: PropTypes.string,
+    dist: PropTypes.number.isRequired,
+    mag: PropTypes.number.isRequired,
+    spect: PropTypes.string,
+    lum: PropTypes.number,
+  }),
 };
 
 export default StarInfoPanel;

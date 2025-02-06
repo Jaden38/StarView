@@ -6,6 +6,26 @@ const useStarData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const isValidStar = (star) => {
+    return (
+      star.x != null &&
+      star.y != null &&
+      star.z != null &&
+      !isNaN(star.x) &&
+      !isNaN(star.y) &&
+      !isNaN(star.z)
+    );
+  };
+
+  const mapStarData = (star) => ({
+    ...star,
+    x: parseFloat(star.x),
+    y: parseFloat(star.y),
+    z: parseFloat(star.z),
+    mag: parseFloat(star.mag),
+    dist: parseFloat(star.dist),
+  });
+
   useEffect(() => {
     const loadStars = async () => {
       try {
@@ -23,23 +43,8 @@ const useStarData = () => {
 
             // Filter out invalid entries and transform data
             const validStars = results.data
-              .filter(
-                (star) =>
-                  star.x != null &&
-                  star.y != null &&
-                  star.z != null &&
-                  !isNaN(star.x) &&
-                  !isNaN(star.y) &&
-                  !isNaN(star.z)
-              )
-              .map((star) => ({
-                ...star,
-                x: parseFloat(star.x),
-                y: parseFloat(star.y),
-                z: parseFloat(star.z),
-                mag: parseFloat(star.mag),
-                dist: parseFloat(star.dist),
-              }));
+              .filter(isValidStar)
+              .map(mapStarData);
 
             console.log("Loaded stars:", validStars.length); // Debug log
             setStars(validStars);

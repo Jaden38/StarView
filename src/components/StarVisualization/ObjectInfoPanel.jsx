@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const formatNumber = (num) => {
   if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
@@ -37,6 +38,20 @@ const ObjectInfoPanel = ({ selectedObject }) => {
       </div>
     </div>
   );
+};
+
+ObjectInfoPanel.propTypes = {
+  selectedObject: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    objectType: PropTypes.string.isRequired,
+    type: PropTypes.string,
+    temperature: PropTypes.number.isRequired,
+    radius: PropTypes.number.isRequired,
+    mass: PropTypes.number.isRequired,
+    distance: PropTypes.number,
+    orbitalPeriod: PropTypes.number,
+    moons: PropTypes.number,
+  }),
 };
 
 export default ObjectInfoPanel;

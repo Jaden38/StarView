@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import { Sliders, Star, Thermometer } from "lucide-react";
 
 const Sidebar = ({ filters, onFilterChange }) => {
@@ -27,7 +28,7 @@ const Sidebar = ({ filters, onFilterChange }) => {
             <input
               type="range"
               min={filters.magnitudeType === "absolute" ? -15 : -27}
-              max={filters.magnitudeType === "absolute" ? 15 : 15}
+              max={15}
               step="0.1"
               value={filters.magnitude}
               onChange={(e) =>
@@ -91,6 +92,16 @@ const Sidebar = ({ filters, onFilterChange }) => {
       </div>
     </div>
   );
+};
+
+Sidebar.propTypes = {
+  filters: PropTypes.shape({
+    magnitudeType: PropTypes.oneOf(["apparent", "absolute"]).isRequired,
+    magnitude: PropTypes.number.isRequired,
+    minTemp: PropTypes.number.isRequired,
+    maxDistance: PropTypes.number.isRequired,
+  }).isRequired,
+  onFilterChange: PropTypes.func.isRequired,
 };
 
 export default Sidebar;

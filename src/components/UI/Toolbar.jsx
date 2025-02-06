@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import {
   Camera,
   EyeIcon,
@@ -103,6 +104,14 @@ const Toolbar = ({
       </div>
     </div>
   );
+};
+
+Toolbar.propTypes = {
+  onModeChange: PropTypes.func.isRequired,
+  activeModes: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onSearch: PropTypes.func.isRequired,
+  onCameraToggle: PropTypes.func.isRequired,
+  isFreeCamera: PropTypes.bool.isRequired,
 };
 
 export default Toolbar;

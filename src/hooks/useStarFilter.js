@@ -4,16 +4,25 @@ import { CONSTELLATION_CONNECTIONS, filterStars } from "../utils/threeHelper";
 const getStarTemperature = (spect) => {
   if (!spect) return 5000;
   const type = spect[0];
-  const temps = {
-    O: 30000,
-    B: 20000,
-    A: 9000,
-    F: 7000,
-    G: 5500,
-    K: 4000,
-    M: 3000,
-  };
-  return temps[type] || 5000;
+  return (
+    {
+      O: 30000,
+      B: 20000,
+      A: 9000,
+      F: 7000,
+      G: 5500,
+      K: 4000,
+      M: 3000,
+    }[type] || 5000
+  );
+};
+
+const getValidConstellationStars = () => {
+  const validStarIds = new Set();
+  Object.values(CONSTELLATION_CONNECTIONS).forEach((connections) => {
+    connections.flat().forEach((id) => validStarIds.add(id));
+  });
+  return validStarIds;
 };
 
 const useStarFilter = (
@@ -22,24 +31,20 @@ const useStarFilter = (
   activeModes,
   searchQuery,
   constellation
-) => {
-  return useMemo(() => {
+) =>
+  useMemo(() => {
     if (!stars?.length) return [];
 
     let filteredStars = [...stars];
 
+    // **Remove solar system stars**
     if (activeModes.includes("solarSystem")) {
       filteredStars = filteredStars.filter((star) => star.id !== 0);
     }
 
+    // **Handle constellation filtering**
     if (activeModes.includes("constellations")) {
-      const validStarIds = new Set();
-      Object.values(CONSTELLATION_CONNECTIONS).forEach((connections) => {
-        connections.forEach((connection) => {
-          connection.forEach((id) => validStarIds.add(id));
-        });
-      });
-
+      const validStarIds = getValidConstellationStars();
       filteredStars = filteredStars.filter((star) =>
         validStarIds.has(star.id.toString())
       );
@@ -49,21 +54,22 @@ const useStarFilter = (
           (star) => star.con === constellation
         );
       }
-    } else if (activeModes.length > 0) {
+    }
+    // **Handle other active modes**
+    else if (activeModes.length > 0) {
       const modeStars = activeModes
         .filter((mode) => mode !== "solarSystem")
-        .map((mode) => filterStars[mode]([...stars]));
+        .flatMap((mode) => filterStars[mode]?.([...stars]) || []);
 
       if (modeStars.length > 0) {
         const starIds = new Set();
-        filteredStars = modeStars.flat().filter((star) => {
-          if (starIds.has(star.id)) return false;
-          starIds.add(star.id);
-          return true;
-        });
+        filteredStars = modeStars.filter((star) =>
+          starIds.has(star.id) ? false : starIds.add(star.id)
+        );
       }
     }
 
+    // **Apply numerical filters**
     filteredStars = filteredStars.filter((star) => {
       const temp = getStarTemperature(star.spect);
       const relevantMagnitude =
@@ -75,17 +81,17 @@ const useStarFilter = (
       );
     });
 
+    // **Apply search query**
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredStars = filteredStars.filter(
         (star) =>
-          (star.proper && star.proper.toLowerCase().includes(query)) ||
-          (star.con && star.con.toLowerCase().includes(query))
+          star.proper?.toLowerCase().includes(query) ||
+          star.con?.toLowerCase().includes(query)
       );
     }
 
     return filteredStars;
   }, [stars, filters, activeModes, searchQuery, constellation]);
-};
 
 export default useStarFilter;
