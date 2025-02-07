@@ -185,6 +185,24 @@ export const CONSTELLATION_CONNECTIONS = {
   Vir: [[57380, 60030], [60030, 61941], [61941, 65474], [65474, 69427], [69427, 69701], [69701, 71957], [65474, 66249], [66249, 68520], [68520, 72220], [66249, 63090], [63090, 63608], [63090, 61941]],
   Vel: [[39953, 42536], [42536, 42913], [42913, 45941], [45941, 48774], [48774, 52727], [52727, 51986], [51986, 50191], [50191, 46651], [46651, 44816], [44816, 39953]]
 };
+
+const textureLoader = new THREE.TextureLoader();
+const textureCache = new Map();
+const loadTexture = (path) => {
+  if (textureCache.has(path)) {
+    return textureCache.get(path);
+  }
+
+  const texture = textureLoader.load(path, (texture) => {
+    texture.anisotropy = 16;
+    texture.needsUpdate = true;
+  });
+
+  textureCache.set(path, texture);
+  return texture;
+};
+
+
 export const setupScene = (container) => {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
@@ -379,7 +397,6 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
       new THREE.Float32BufferAttribute(positions, 3)
   );
 
-  // Create a more robust material for the lines
   const material = new THREE.LineBasicMaterial({
     color: 0x4444ff,
     opacity: 0.8,
@@ -387,7 +404,6 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
     linewidth: 1,
     depthTest: true,
     depthWrite: true,
-    // Force the material to always render
     alphaTest: 0,
     side: THREE.DoubleSide
   });
@@ -396,30 +412,24 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
   lines.userData = {
     type: 'constellationLines',
     constellation: constellationAbbreviation,
-    // Add reference counting to prevent garbage collection
     referenceCount: 1
   };
 
-  // Set rendering properties
   lines.renderOrder = 1;
-  lines.frustumCulled = false; // Prevent frustum culling from removing the lines
+  lines.frustumCulled = false;
 
   return lines;
 };
 
 export const createSolarSystem = (scale = 2e-6) => {
-  const textureLoader = new THREE.TextureLoader();
   const group = new THREE.Group();
   group.userData.type = "solarSystem";
 
-  const sunTexture = textureLoader.load('assets/sun.jpg', (texture) => {
-    texture.anisotropy = 16;
-    texture.needsUpdate = true;
-  });
+  const sunTexture = loadTexture('assets/sun.jpg');
   const sunGeometry = new THREE.SphereGeometry(
-    SOLAR_SYSTEM.sun.radius * scale * 20,
-    32,
-    32
+      SOLAR_SYSTEM.sun.radius * scale * 20,
+      32,
+      32
   );
   const sunMaterial = new THREE.MeshBasicMaterial({
     map: sunTexture,
@@ -445,17 +455,15 @@ export const createSolarSystem = (scale = 2e-6) => {
 
   SOLAR_SYSTEM.planets.forEach((planet) => {
     const planetGeometry = new THREE.SphereGeometry(
-      planet.radius * scale * 2000,
-      32,
-      32
+        planet.radius * scale * 2000,
+        32,
+        32
     );
 
     let texture = null;
     if (planetTextures[planet.name]) {
-      texture = textureLoader.load(`assets/${planetTextures[planet.name]}`, (tex) => {
-        tex.anisotropy = 16;
-        tex.needsUpdate = true;
-      });
+      const texturePath = `assets/${planetTextures[planet.name]}`;
+      texture = loadTexture(texturePath);
     }
 
     const planetMaterial = new THREE.MeshPhongMaterial({
@@ -472,9 +480,9 @@ export const createSolarSystem = (scale = 2e-6) => {
     group.add(planetMesh);
 
     const orbitGeometry = new THREE.RingGeometry(
-      planet.distance * scale,
-      planet.distance * scale * 1.001,
-      64
+        planet.distance * scale,
+        planet.distance * scale * 1.001,
+        64
     );
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0x444444,
@@ -486,7 +494,6 @@ export const createSolarSystem = (scale = 2e-6) => {
     orbit.rotation.x = Math.PI / 2;
     orbit.renderOrder = 0;
     group.add(orbit);
-
   });
 
   return group;
