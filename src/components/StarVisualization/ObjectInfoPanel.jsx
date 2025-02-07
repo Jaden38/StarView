@@ -1,5 +1,17 @@
 import React from "react";
-import PropTypes from "prop-types";
+import {
+  Sun,
+  ThermometerSun,
+  Circle,
+  Scale,
+  Orbit,
+  Satellite,
+  Ruler,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const formatNumber = (num) => {
   if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
@@ -7,51 +19,112 @@ const formatNumber = (num) => {
   return num.toFixed(1);
 };
 
+const InfoRow = ({ icon: Icon, label, value, className }) => (
+  <div className="flex items-center space-x-3 text-sm">
+    <div className="flex items-center space-x-2 min-w-[140px]">
+      <Icon className="w-4 h-4 text-zinc-400" />
+      <span className="text-zinc-400">{label}:</span>
+    </div>
+    <span className={cn("text-zinc-100 font-medium", className)}>{value}</span>
+  </div>
+);
+
 const ObjectInfoPanel = ({ selectedObject }) => {
   if (!selectedObject) return null;
 
-  return (
-    <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
-      <h3 className="font-bold text-xl">{selectedObject.name}</h3>
-      <div className="space-y-1 mt-2">
-        <p>Type: {selectedObject.objectType === "sun" ? "Star" : "Planet"}</p>
-        {selectedObject.objectType === "sun" ? (
-          <>
-            <p>Spectral Type: {selectedObject.type}</p>
-            <p>Temperature: {formatNumber(selectedObject.temperature)}K</p>
-            <p>Radius: {formatNumber(selectedObject.radius)} km</p>
-            <p>Mass: {selectedObject.mass} solar masses</p>
-          </>
-        ) : (
-          <>
-            <p>
-              Distance from Sun: {formatNumber(selectedObject.distance / 1e6)}{" "}
-              million km
-            </p>
-            <p>Temperature: {selectedObject.temperature}K</p>
-            <p>Radius: {formatNumber(selectedObject.radius)} km</p>
-            <p>Mass: {selectedObject.mass} Earth masses</p>
-            <p>Orbital Period: {selectedObject.orbitalPeriod} Earth days</p>
-            <p>Moons: {selectedObject.moons}</p>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
+  const isStar = selectedObject.objectType === "sun";
 
-ObjectInfoPanel.propTypes = {
-  selectedObject: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    objectType: PropTypes.string.isRequired,
-    type: PropTypes.string,
-    temperature: PropTypes.number.isRequired,
-    radius: PropTypes.number.isRequired,
-    mass: PropTypes.number.isRequired,
-    distance: PropTypes.number,
-    orbitalPeriod: PropTypes.number,
-    moons: PropTypes.number,
-  }),
+  return (
+    <Card className="fixed bottom-4 left-4 bg-zinc-950/90 border-zinc-800/20 backdrop-blur-sm shadow-2xl w-80 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <CardContent className="p-4">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-lg text-zinc-100">
+              {selectedObject.name}
+            </h3>
+            <Badge
+              variant="outline"
+              className={cn(
+                "mt-1 bg-zinc-900/50 border-zinc-800 text-xs",
+                isStar ? "text-yellow-400" : "text-blue-400"
+              )}
+            >
+              {isStar ? "Star" : "Planet"}
+            </Badge>
+          </div>
+        </div>
+
+        <Separator className="bg-zinc-800/50 my-3" />
+
+        {/* Details */}
+        <div className="space-y-2.5">
+          {isStar ? (
+            <>
+              <InfoRow
+                icon={Sun}
+                label="Spectral Type"
+                value={selectedObject.type}
+              />
+              <InfoRow
+                icon={ThermometerSun}
+                label="Temperature"
+                value={`${formatNumber(selectedObject.temperature)}K`}
+              />
+              <InfoRow
+                icon={Circle}
+                label="Radius"
+                value={`${formatNumber(selectedObject.radius)} km`}
+              />
+              <InfoRow
+                icon={Scale}
+                label="Mass"
+                value={`${selectedObject.mass} solar masses`}
+              />
+            </>
+          ) : (
+            <>
+              <InfoRow
+                icon={Ruler}
+                label="Distance"
+                value={`${formatNumber(
+                  selectedObject.distance / 1e6
+                )} million km`}
+              />
+              <InfoRow
+                icon={ThermometerSun}
+                label="Temperature"
+                value={`${selectedObject.temperature}K`}
+              />
+              <InfoRow
+                icon={Circle}
+                label="Radius"
+                value={`${formatNumber(selectedObject.radius)} km`}
+              />
+              <InfoRow
+                icon={Scale}
+                label="Mass"
+                value={`${selectedObject.mass} Earth masses`}
+              />
+              <InfoRow
+                icon={Orbit}
+                label="Orbital Period"
+                value={`${selectedObject.orbitalPeriod} Earth days`}
+              />
+              <InfoRow
+                icon={Satellite}
+                label="Moons"
+                value={selectedObject.moons}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Visual Indicator */}
+        <div className="absolute -top-1 left-4 right-4 h-px bg-gradient-to-r from-transparent via-zinc-400/20 to-transparent" />
+      </CardContent>
+    </Card>
+  );
 };
 
 export default ObjectInfoPanel;

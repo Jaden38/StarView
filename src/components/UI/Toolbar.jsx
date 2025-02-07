@@ -18,7 +18,7 @@ const ToolbarButton = ({ icon: Icon, label, active, onClick }) => (
     onClick={onClick}
     className={cn(
       "h-8 px-2.5 transition-all duration-200",
-      "hover:bg-zinc-800/50",
+      "hover:bg-zinc-800/50 hover:text-zinc-300",
       active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400"
     )}
   >
@@ -93,9 +93,9 @@ const Toolbar = ({
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative group">
         <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
-          <Search className="w-3.5 h-3.5 text-zinc-400" />
+          <Search className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-300 transition-colors duration-200" />
         </div>
         <input
           type="text"
@@ -105,6 +105,7 @@ const Toolbar = ({
             "bg-zinc-900/90 border border-zinc-800",
             "text-zinc-100 placeholder:text-zinc-500",
             "focus:outline-none focus:ring-1 focus:ring-zinc-700",
+            "hover:border-zinc-700",
             "transition-colors duration-200"
           )}
           onChange={(e) => onSearch(e.target.value)}

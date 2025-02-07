@@ -24,6 +24,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #000;
+  overflow: hidden;
 }
 
 #root {

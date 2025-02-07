@@ -34,6 +34,7 @@ const StarVisualization = forwardRef(
     const controlsRef = useRef(null);
     const orbitControlsRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const resizeObserverRef = useRef(null);
     const { stars, loading, error } = useStarData();
     const [selectedStar, setSelectedStar] = useState(null);
     const [selectedObject, setSelectedObject] = useState(null);
@@ -54,6 +55,40 @@ const StarVisualization = forwardRef(
       searchQuery,
       constellation
     );
+
+    const handleResize = () => {
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current)
+        return;
+
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+
+      cameraRef.current.aspect = width / height;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(width, height);
+      rendererRef.current.setPixelRatio(window.devicePixelRatio);
+    };
+
+    useEffect(() => {
+      // Initialize resize observer
+      resizeObserverRef.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === containerRef.current) {
+            handleResize();
+          }
+        }
+      });
+
+      if (containerRef.current) {
+        resizeObserverRef.current.observe(containerRef.current);
+      }
+
+      return () => {
+        if (resizeObserverRef.current) {
+          resizeObserverRef.current.disconnect();
+        }
+      };
+    }, []);
 
     const toggleCamera = () => {
       if (!cameraRef.current) return;
@@ -80,19 +115,6 @@ const StarVisualization = forwardRef(
       cameraRef.current = camera;
       orbitControlsRef.current = orbitControls;
       controlsRef.current = orbitControls;
-
-      const handleResize = () => {
-        if (!containerRef.current || !cameraRef.current || !rendererRef.current)
-          return;
-
-        camera.aspect =
-          containerRef.current.clientWidth / containerRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(
-          containerRef.current.clientWidth,
-          containerRef.current.clientHeight
-        );
-      };
 
       window.addEventListener("resize", handleResize);
 
