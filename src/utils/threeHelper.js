@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-// Solar system data
 const SOLAR_SYSTEM = {
   sun: {
     name: "Sun",
@@ -9,7 +8,7 @@ const SOLAR_SYSTEM = {
     color: 0xffff00,
     temperature: 5778,
     type: "G2V",
-    mass: 1, // Solar masses
+    mass: 1,
     distance: 0,
   },
   planets: [
@@ -113,15 +112,13 @@ export const setupScene = (container) => {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
-  // Adjusted camera settings with much larger far clipping plane
   const camera = new THREE.PerspectiveCamera(
-    75,
-    container.clientWidth / container.clientHeight,
-    0.001, // Smaller near plane to see close objects
-    1000000 // Much larger far plane to see distant objects
+      75,
+      container.clientWidth / container.clientHeight,
+      0.001,
+      1000000
   );
 
-  // Position camera further out to see more of the solar system
   camera.position.set(0, 2000, 4000);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -132,21 +129,18 @@ export const setupScene = (container) => {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
-  controls.maxDistance = 100000; // Allow zooming out further
-  controls.minDistance = 1; // Allow zooming in closer
+  controls.maxDistance = 100000;
+  controls.minDistance = 1;
 
-  // Add ambient light for better visibility
-  const ambientLight = new THREE.AmbientLight(0x404040, 2); // Increased intensity
+  const ambientLight = new THREE.AmbientLight(0x404040, 2);
   scene.add(ambientLight);
 
-  // Add directional light for shadows
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Increased intensity
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
 
-  // Raycaster setup with adjusted threshold
   const raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = 20; // Increased for better selection
+  raycaster.params.Points.threshold = 20;
 
   const handleResize = () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -167,9 +161,9 @@ export const setupScene = (container) => {
 export const filterStars = {
   closest: (stars, limit = 50) => {
     return [...stars]
-      .filter((star) => star.mag <= 6) // Only visible stars (magnitude <= 6)
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, limit);
+        .filter((star) => star.mag <= 6)
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, limit);
   },
 
   brightest: (stars, limit = 50) => {
@@ -192,15 +186,15 @@ export const filterStars = {
       return temps[type] || 0;
     };
     return [...stars]
-      .sort((a, b) => getTemp(b.spect) - getTemp(a.spect))
-      .slice(0, limit);
+        .sort((a, b) => getTemp(b.spect) - getTemp(a.spect))
+        .slice(0, limit);
   },
 
   largest: (stars, limit = 50) => {
     return [...stars]
-      .filter((star) => star.lum) // Only stars with known luminosity
-      .sort((a, b) => b.lum - a.lum)
-      .slice(0, limit);
+        .filter((star) => star.lum)
+        .sort((a, b) => b.lum - a.lum)
+        .slice(0, limit);
   },
 
   constellations: (stars, constellation = null) => {
@@ -210,9 +204,9 @@ export const filterStars = {
 };
 
 export const createStarField = (
-  stars,
-  highlightedStars = [],
-  constellation = null
+    stars,
+    highlightedStars = [],
+    constellation = null
 ) => {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
@@ -223,8 +217,8 @@ export const createStarField = (
     positions.push(star.x * 100, star.y * 100, star.z * 100);
 
     const isHighlighted =
-      highlightedStars.includes(star.id) ||
-      (constellation && star.con === constellation);
+        highlightedStars.includes(star.id) ||
+        (constellation && star.con === constellation);
     const color = getStarColor(star.spect, isHighlighted);
     colors.push(color.r, color.g, color.b);
 
@@ -233,8 +227,8 @@ export const createStarField = (
   });
 
   geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(positions, 3)
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3)
   );
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
@@ -260,15 +254,13 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
 
-  // Filter stars for this constellation and create a map by ID
   const starMap = {};
   stars
-    .filter((star) => star.con === constellationAbbreviation)
-    .forEach((star) => {
-      starMap[star.id] = star;
-    });
+      .filter((star) => star.con === constellationAbbreviation)
+      .forEach((star) => {
+        starMap[String(star.id)] = star;
+      });
 
-  // For each connection in the constellation
   connections.forEach((connection) => {
     for (let i = 0; i < connection.length - 1; i++) {
       const star1 = starMap[connection[i]];
@@ -276,12 +268,12 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
 
       if (star1 && star2) {
         positions.push(
-          star1.x * 100,
-          star1.y * 100,
-          star1.z * 100,
-          star2.x * 100,
-          star2.y * 100,
-          star2.z * 100
+            star1.x * 100,
+            star1.y * 100,
+            star1.z * 100,
+            star2.x * 100,
+            star2.y * 100,
+            star2.z * 100
         );
       }
     }
@@ -290,8 +282,8 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
   if (positions.length === 0) return null;
 
   geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(positions, 3)
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3)
   );
 
   const material = new THREE.LineBasicMaterial({
@@ -308,11 +300,10 @@ export const createSolarSystem = (scale = 2e-6) => {
   const group = new THREE.Group();
   group.userData.type = "solarSystem";
 
-  // Keep sun size the same
   const sunGeometry = new THREE.SphereGeometry(
-    SOLAR_SYSTEM.sun.radius * scale * 20, // Keep existing sun scale
-    32,
-    32
+      SOLAR_SYSTEM.sun.radius * scale * 20,
+      32,
+      32
   );
   const sunMaterial = new THREE.MeshBasicMaterial({
     color: SOLAR_SYSTEM.sun.color,
@@ -324,30 +315,26 @@ export const createSolarSystem = (scale = 2e-6) => {
   };
   group.add(sun);
 
-  // Increase base multiplier for planets
   SOLAR_SYSTEM.planets.forEach((planet) => {
     const planetGeometry = new THREE.SphereGeometry(
-      planet.radius * scale * 2000, // Increased from 1000 to 2000
-      32,
-      32
+        planet.radius * scale * 2000,
+        32,
+        32
     );
     const planetMaterial = new THREE.MeshPhongMaterial({ color: planet.color });
     const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
 
-    // Position planet
     planetMesh.position.x = planet.distance * scale;
 
-    // Add planet data to userData for tooltips
     planetMesh.userData = {
       ...planet,
       objectType: "planet",
     };
 
-    // Add orbit line
     const orbitGeometry = new THREE.RingGeometry(
-      planet.distance * scale,
-      planet.distance * scale,
-      64
+        planet.distance * scale,
+        planet.distance * scale,
+        64
     );
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0x444444,
