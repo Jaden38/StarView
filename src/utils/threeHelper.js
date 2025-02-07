@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
+// Solar system data
 const SOLAR_SYSTEM = {
   sun: {
     name: "Sun",
@@ -8,7 +9,7 @@ const SOLAR_SYSTEM = {
     color: 0xffff00,
     temperature: 5778,
     type: "G2V",
-    mass: 1,
+    mass: 1, // Solar masses
     distance: 0,
   },
   planets: [
@@ -112,13 +113,15 @@ export const setupScene = (container) => {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
+  // Adjusted camera settings with much larger far clipping plane
   const camera = new THREE.PerspectiveCamera(
-      75,
-      container.clientWidth / container.clientHeight,
-      0.001,
-      1000000
+    75,
+    container.clientWidth / container.clientHeight,
+    0.001, // Smaller near plane to see close objects
+    1000000 // Much larger far plane to see distant objects
   );
 
+  // Position camera further out to see more of the solar system
   camera.position.set(0, 2000, 4000);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -129,18 +132,21 @@ export const setupScene = (container) => {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
-  controls.maxDistance = 100000;
-  controls.minDistance = 1;
+  controls.maxDistance = 100000; // Allow zooming out further
+  controls.minDistance = 1; // Allow zooming in closer
 
-  const ambientLight = new THREE.AmbientLight(0x404040, 2);
+  // Add ambient light for better visibility
+  const ambientLight = new THREE.AmbientLight(0x404040, 2); // Increased intensity
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+  // Add directional light for shadows
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Increased intensity
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
 
+  // Raycaster setup with adjusted threshold
   const raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = 20;
+  raycaster.params.Points.threshold = 20; // Increased for better selection
 
   const handleResize = () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -161,9 +167,9 @@ export const setupScene = (container) => {
 export const filterStars = {
   closest: (stars, limit = 50) => {
     return [...stars]
-        .filter((star) => star.mag <= 6)
-        .sort((a, b) => a.dist - b.dist)
-        .slice(0, limit);
+      .filter((star) => star.mag <= 6) // Only visible stars (magnitude <= 6)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, limit);
   },
 
   brightest: (stars, limit = 50) => {
@@ -186,15 +192,15 @@ export const filterStars = {
       return temps[type] || 0;
     };
     return [...stars]
-        .sort((a, b) => getTemp(b.spect) - getTemp(a.spect))
-        .slice(0, limit);
+      .sort((a, b) => getTemp(b.spect) - getTemp(a.spect))
+      .slice(0, limit);
   },
 
   largest: (stars, limit = 50) => {
     return [...stars]
-        .filter((star) => star.lum)
-        .sort((a, b) => b.lum - a.lum)
-        .slice(0, limit);
+      .filter((star) => star.lum) // Only stars with known luminosity
+      .sort((a, b) => b.lum - a.lum)
+      .slice(0, limit);
   },
 
   constellations: (stars, constellation = null) => {
@@ -204,9 +210,9 @@ export const filterStars = {
 };
 
 export const createStarField = (
-    stars,
-    highlightedStars = [],
-    constellation = null
+  stars,
+  highlightedStars = [],
+  constellation = null
 ) => {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
@@ -217,8 +223,8 @@ export const createStarField = (
     positions.push(star.x * 100, star.y * 100, star.z * 100);
 
     const isHighlighted =
-        highlightedStars.includes(star.id) ||
-        (constellation && star.con === constellation);
+      highlightedStars.includes(star.id) ||
+      (constellation && star.con === constellation);
     const color = getStarColor(star.spect, isHighlighted);
     colors.push(color.r, color.g, color.b);
 
@@ -227,8 +233,8 @@ export const createStarField = (
   });
 
   geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(positions, 3)
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
   );
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
@@ -254,13 +260,15 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
   const geometry = new THREE.BufferGeometry();
   const positions = [];
 
+  // Filter stars for this constellation and create a map by ID
   const starMap = {};
   stars
-      .filter((star) => star.con === constellationAbbreviation)
-      .forEach((star) => {
-        starMap[String(star.id)] = star;
-      });
+    .filter((star) => star.con === constellationAbbreviation)
+    .forEach((star) => {
+      starMap[star.id] = star;
+    });
 
+  // For each connection in the constellation
   connections.forEach((connection) => {
     for (let i = 0; i < connection.length - 1; i++) {
       const star1 = starMap[connection[i]];
@@ -268,12 +276,12 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
 
       if (star1 && star2) {
         positions.push(
-            star1.x * 100,
-            star1.y * 100,
-            star1.z * 100,
-            star2.x * 100,
-            star2.y * 100,
-            star2.z * 100
+          star1.x * 100,
+          star1.y * 100,
+          star1.z * 100,
+          star2.x * 100,
+          star2.y * 100,
+          star2.z * 100
         );
       }
     }
@@ -282,8 +290,8 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
   if (positions.length === 0) return null;
 
   geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(positions, 3)
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
   );
 
   const material = new THREE.LineBasicMaterial({
@@ -297,59 +305,103 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
 };
 
 export const createSolarSystem = (scale = 2e-6) => {
+  const textureLoader = new THREE.TextureLoader();
   const group = new THREE.Group();
   group.userData.type = "solarSystem";
 
+  // --- Sun ---
+  const sunTexture = textureLoader.load('assets/sun.jpg', (texture) => {
+    texture.anisotropy = 16;  // Improve texture clarity at oblique angles
+    texture.needsUpdate = true;
+  });
   const sunGeometry = new THREE.SphereGeometry(
-      SOLAR_SYSTEM.sun.radius * scale * 20,
-      32,
-      32
+    SOLAR_SYSTEM.sun.radius * scale * 20, // Sun's scale remains the same
+    32,
+    32
   );
   const sunMaterial = new THREE.MeshBasicMaterial({
-    color: SOLAR_SYSTEM.sun.color,
+    map: sunTexture,
   });
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sun.userData = {
     ...SOLAR_SYSTEM.sun,
     objectType: "sun",
   };
+  // Ensure the sun renders after the orbit lines
+  sun.renderOrder = 1;
   group.add(sun);
 
+  // --- Mapping planet names to texture filenames ---
+  const planetTextures = {
+    Mercury: 'mercury.jpg',
+    Venus: 'venus_s.jpg', // Using one of the Venus textures
+    Earth: 'earth.jpg',
+    Mars: 'mars.jpg',
+    Jupiter: 'jupiter.jpg',
+    Saturn: 'saturn.jpg',
+    Uranus: 'uranus.jpg',
+    Neptune: 'neptune.jpg'
+  };
+
+  // --- Create Planets ---
   SOLAR_SYSTEM.planets.forEach((planet) => {
+    // Create planet geometry.
     const planetGeometry = new THREE.SphereGeometry(
-        planet.radius * scale * 2000,
-        32,
-        32
+      planet.radius * scale * 2000, // Planet scaling factor
+      32,
+      32
     );
-    const planetMaterial = new THREE.MeshPhongMaterial({ color: planet.color });
+
+    // Load the texture if available.
+    let texture = null;
+    if (planetTextures[planet.name]) {
+      texture = textureLoader.load(`assets/${planetTextures[planet.name]}`, (tex) => {
+        tex.anisotropy = 16;
+        tex.needsUpdate = true;
+      });
+    }
+
+    // Create the material with the loaded texture.
+    const planetMaterial = new THREE.MeshPhongMaterial({
+      map: texture,
+    });
+
     const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
-
     planetMesh.position.x = planet.distance * scale;
-
     planetMesh.userData = {
       ...planet,
       objectType: "planet",
     };
+    // Set render order so the planet renders above orbit lines
+    planetMesh.renderOrder = 1;
+    group.add(planetMesh);
 
+    // --- Orbit Line ---
+    // Slightly adjust the outer radius to reduce potential z-fighting with the planet.
     const orbitGeometry = new THREE.RingGeometry(
-        planet.distance * scale,
-        planet.distance * scale,
-        64
+      planet.distance * scale,
+      planet.distance * scale * 1.001,
+      64
     );
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0x444444,
       transparent: true,
       opacity: 0.3,
+      depthWrite: false, // Avoid depth writing to reduce flickering
     });
     const orbit = new THREE.Line(orbitGeometry, orbitMaterial);
     orbit.rotation.x = Math.PI / 2;
-
-    group.add(planetMesh);
+    // Ensure orbit lines are rendered behind the planet meshes.
+    orbit.renderOrder = 0;
     group.add(orbit);
+
+    // --- Saturn's Ring Removed ---
+    // The Saturn belt code has been removed as per your request.
   });
 
   return group;
 };
+
 
 const getStarColor = (spectralType, isHighlighted = false) => {
   const color = new THREE.Color();
