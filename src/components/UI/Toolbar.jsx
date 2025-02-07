@@ -1,5 +1,4 @@
 import React from "react";
-import PropTypes from "prop-types";
 import {
   Camera,
   EyeIcon,
@@ -9,6 +8,24 @@ import {
   Sparkles,
   ThermometerSun,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const ToolbarButton = ({ icon: Icon, label, active, onClick }) => (
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={onClick}
+    className={cn(
+      "h-8 px-2.5 transition-all duration-200",
+      "hover:bg-zinc-800/50",
+      active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400"
+    )}
+  >
+    <Icon className="w-4 h-4 mr-1.5" />
+    <span className="text-xs font-medium">{label}</span>
+  </Button>
+);
 
 const Toolbar = ({
   onModeChange,
@@ -20,98 +37,81 @@ const Toolbar = ({
   const isActive = (mode) => activeModes.includes(mode);
 
   return (
-    <div className="bg-gray-800 p-4 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={() => onCameraToggle()}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isFreeCamera ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <Camera className="w-4 h-4" />
-          <span>{isFreeCamera ? "Center Camera" : "Free Camera"}</span>
-        </button>
+    <div className="bg-zinc-950/90 border-b border-zinc-800/20 h-12 flex items-center justify-between px-3">
+      <div className="flex items-center gap-1.5">
+        {/* Camera Control */}
+        <ToolbarButton
+          icon={Camera}
+          label={isFreeCamera ? "Center" : "Free Cam"}
+          active={isFreeCamera}
+          onClick={onCameraToggle}
+        />
 
-        <button
+        <div className="h-4 w-px bg-zinc-800 mx-1" />
+
+        {/* View Modes */}
+        <ToolbarButton
+          icon={EyeIcon}
+          label="Closest"
+          active={isActive("closest")}
           onClick={() => onModeChange("closest")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("closest") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <EyeIcon className="w-4 h-4" />
-          <span>Closest Visible Stars</span>
-        </button>
-
-        <button
+        />
+        <ToolbarButton
+          icon={Sparkles}
+          label="Brightest"
+          active={isActive("brightest")}
           onClick={() => onModeChange("brightest")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("brightest") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Brightest Stars</span>
-        </button>
-
-        <button
+        />
+        <ToolbarButton
+          icon={ThermometerSun}
+          label="Hottest"
+          active={isActive("hottest")}
           onClick={() => onModeChange("hottest")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("hottest") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <ThermometerSun className="w-4 h-4" />
-          <span>Hottest Stars</span>
-        </button>
-
-        <button
+        />
+        <ToolbarButton
+          icon={Maximize2}
+          label="Largest"
+          active={isActive("largest")}
           onClick={() => onModeChange("largest")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("largest") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <Maximize2 className="w-4 h-4" />
-          <span>Largest Stars</span>
-        </button>
+        />
 
-        <button
+        <div className="h-4 w-px bg-zinc-800 mx-1" />
+
+        {/* Special Views */}
+        <ToolbarButton
+          icon={Sparkles}
+          label="Constellations"
+          active={isActive("constellations")}
           onClick={() => onModeChange("constellations")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("constellations") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Constellations</span>
-        </button>
-
-        <button
+        />
+        <ToolbarButton
+          icon={Globe2}
+          label="Solar"
+          active={isActive("solarSystem")}
           onClick={() => onModeChange("solarSystem")}
-          className={`px-3 py-2 text-sm flex items-center space-x-2 rounded ${
-            isActive("solarSystem") ? "bg-blue-600" : "bg-gray-600"
-          }`}
-        >
-          <Globe2 className="w-4 h-4" />
-          <span>Solar System</span>
-        </button>
+        />
       </div>
 
-      <div className="flex items-center bg-gray-700 rounded px-3 py-2">
-        <Search className="w-4 h-4 text-gray-400" />
+      {/* Search */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
+          <Search className="w-3.5 h-3.5 text-zinc-400" />
+        </div>
         <input
           type="text"
           placeholder="Search stars or constellations..."
-          className="bg-transparent border-none text-white ml-2 focus:outline-none w-64"
+          className={cn(
+            "h-7 w-56 pl-7 pr-3 rounded-md text-xs",
+            "bg-zinc-900/90 border border-zinc-800",
+            "text-zinc-100 placeholder:text-zinc-500",
+            "focus:outline-none focus:ring-1 focus:ring-zinc-700",
+            "transition-colors duration-200"
+          )}
           onChange={(e) => onSearch(e.target.value)}
         />
       </div>
     </div>
   );
-};
-
-Toolbar.propTypes = {
-  onModeChange: PropTypes.func.isRequired,
-  activeModes: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onSearch: PropTypes.func.isRequired,
-  onCameraToggle: PropTypes.func.isRequired,
-  isFreeCamera: PropTypes.bool.isRequired,
 };
 
 export default Toolbar;
