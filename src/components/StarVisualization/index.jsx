@@ -37,7 +37,7 @@ const StarVisualization = forwardRef(
     const resizeObserverRef = useRef(null);
     const constellationLinesRef = useRef([]);
     const starFieldRef = useRef(null);
-    const solarSystemRef = useRef(null); // Add reference to track the solar system object
+    const solarSystemRef = useRef(null);
     const hoverTimeoutRef = useRef(null);
 
     const { stars, loading, error } = useStarData();
@@ -130,24 +130,22 @@ const StarVisualization = forwardRef(
       };
     }, [loading]);
 
-    // Function to clean up scene objects by type
     const cleanupSceneObjects = (scene, preserveTypes = []) => {
-      // Create a shallow copy of the children array to avoid modification during iteration
       const childrenToCheck = [...scene.children];
-      
+
       childrenToCheck.forEach((child) => {
-        // Keep constellation lines and special preserved types
-        const isConstellationLine = constellationLinesRef.current.includes(child);
-        const isPreservedType = child.userData?.type && preserveTypes.includes(child.userData.type);
-        
+        const isConstellationLine =
+          constellationLinesRef.current.includes(child);
+        const isPreservedType =
+          child.userData?.type && preserveTypes.includes(child.userData.type);
+
         if (!isConstellationLine && !isPreservedType) {
           scene.remove(child);
-          
-          // Dispose of geometries and materials if they exist
+
           if (child.geometry) child.geometry.dispose();
           if (child.material) {
             if (Array.isArray(child.material)) {
-              child.material.forEach(material => material.dispose());
+              child.material.forEach((material) => material.dispose());
             } else {
               child.material.dispose();
             }
@@ -177,10 +175,8 @@ const StarVisualization = forwardRef(
 
       setLastModes(activeModes);
 
-      // Clean up existing scene objects except constellation lines
       cleanupSceneObjects(scene);
 
-      // Add lighting
       const ambientLight = new THREE.AmbientLight(0x404040, 2);
       scene.add(ambientLight);
 
@@ -207,14 +203,14 @@ const StarVisualization = forwardRef(
         hoverTimeoutRef.current = setTimeout(() => {
           raycaster.setFromCamera(mouse, camera);
 
-        if (activeModes.includes("solarSystem")) {
-          const solarSystem = scene.children.find(
-            (child) => child.userData?.type === "solarSystem"
-          );
-          if (solarSystem) {
-            const intersects = raycaster
-              .intersectObjects(solarSystem.children, false)
-              .filter((intersect) => intersect.object.userData?.objectType);
+          if (activeModes.includes("solarSystem")) {
+            const solarSystem = scene.children.find(
+              (child) => child.userData?.type === "solarSystem"
+            );
+            if (solarSystem) {
+              const intersects = raycaster
+                .intersectObjects(solarSystem.children, false)
+                .filter((intersect) => intersect.object.userData?.objectType);
 
               if (intersects.length > 0) {
                 const object = intersects[0].object;
@@ -263,16 +259,16 @@ const StarVisualization = forwardRef(
         setIsMouseDown(false);
       };
 
-
       if (filteredStars.length > 0) {
         const starField = createStarField(filteredStars, [], constellation);
         starFieldRef.current = starField;
         scene.add(starField);
 
-        // Handle constellation lines
         if (activeModes.includes("constellations")) {
           const constellations = [
-            ...new Set(filteredStars.filter(star => star.con).map((star) => star.con)),
+            ...new Set(
+              filteredStars.filter((star) => star.con).map((star) => star.con)
+            ),
           ];
 
           constellations.forEach((con) => {
@@ -305,30 +301,26 @@ const StarVisualization = forwardRef(
         }
       }
 
-      // Handle solar system
       if (activeModes.includes("solarSystem")) {
-        // Remove any existing solar system first
         const existingSolarSystem = scene.children.find(
-          child => child.userData?.type === "solarSystem"
+          (child) => child.userData?.type === "solarSystem"
         );
-        
+
         if (existingSolarSystem) {
           scene.remove(existingSolarSystem);
-          
-          // Clean up children to prevent memory leaks
-          existingSolarSystem.children.forEach(child => {
+
+          existingSolarSystem.children.forEach((child) => {
             if (child.geometry) child.geometry.dispose();
             if (child.material) {
               if (Array.isArray(child.material)) {
-                child.material.forEach(material => material.dispose());
+                child.material.forEach((material) => material.dispose());
               } else {
                 child.material.dispose();
               }
             }
           });
         }
-        
-        // Create new solar system
+
         const solarSystem = createSolarSystem();
         solarSystemRef.current = solarSystem;
         scene.add(solarSystem);
@@ -339,7 +331,6 @@ const StarVisualization = forwardRef(
           controls.target.set(0, 0, 0);
         }
       } else {
-        // If solar system mode is not active, ensure it's not in the scene
         solarSystemRef.current = null;
       }
 
@@ -357,7 +348,6 @@ const StarVisualization = forwardRef(
           orbitControlsRef.current?.update();
         }
 
-        // Update constellation lines visibility
         constellationLinesRef.current.forEach((lines) => {
           if (lines && lines.material) {
             lines.material.needsUpdate = true;
@@ -367,7 +357,6 @@ const StarVisualization = forwardRef(
           }
         });
 
-        // Animate solar system
         if (activeModes.includes("solarSystem")) {
           const solarSystem = scene.children.find(
             (child) => child.userData?.type === "solarSystem"
@@ -427,7 +416,6 @@ const StarVisualization = forwardRef(
           clearTimeout(hoverTimeoutRef.current);
         }
 
-        // Hide constellation lines
         constellationLinesRef.current.forEach((line) => {
           if (line) {
             line.visible = false;

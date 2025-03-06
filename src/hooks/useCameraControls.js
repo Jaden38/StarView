@@ -183,7 +183,6 @@ const useCameraControls = (
       document.removeEventListener("keyup", handleKeyUp);
       orbitControls.enabled = true;
 
-      // Reset camera position
       camera.position.set(0, 2000, 4000);
       camera.lookAt(0, 0, 0);
       orbitControls.target.set(0, 0, 0);

@@ -41,12 +41,11 @@ const useStarData = () => {
               console.error("CSV parsing errors:", results.errors);
             }
 
-            // Filter out invalid entries and transform data
             const validStars = results.data
               .filter(isValidStar)
               .map(mapStarData);
 
-            console.log("Loaded stars:", validStars.length); // Debug log
+            console.log("Loaded stars:", validStars.length);
             setStars(validStars);
             setLoading(false);
           },
