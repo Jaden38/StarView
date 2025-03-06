@@ -202,6 +202,60 @@ const loadTexture = (path) => {
   return texture;
 };
 
+// Advanced star shader with realistic glow effect
+const createStarShaderMaterial = () => {
+  // Vertex shader - calculates the position and size of each star
+  const vertexShader = `
+    attribute float size;
+    varying vec3 vColor;
+    
+    void main() {
+      vColor = color;
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = size * (300.0 / -mvPosition.z);
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `;
+
+  // Fragment shader - creates the circular appearance and glow effect
+  const fragmentShader = `
+    varying vec3 vColor;
+    
+    void main() {
+      // Calculate distance from center of point (0.5, 0.5)
+      vec2 center = vec2(0.5, 0.5);
+      float dist = distance(gl_PointCoord, center);
+      
+      // Create the main star core
+      float core = smoothstep(0.5, 0.0, dist);
+      
+      // Create the glow effect that extends beyond the core
+      float glow = 1.0 - smoothstep(0.0, 0.5, dist);
+      glow = pow(glow, 2.0); // Adjust glow intensity
+      
+      // Blend core and glow
+      vec3 color = vColor;
+      float alpha = core + glow * 0.6; // Adjust glow transparency
+      
+      // Apply a slight color shift to the glow (more white/blue tint)
+      vec3 glowColor = mix(color, vec3(0.8, 0.9, 1.0), 0.3);
+      color = mix(glowColor, color, core / (core + glow));
+      
+      // Output final color
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  return new THREE.ShaderMaterial({
+    uniforms: {},
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    vertexColors: true
+  });
+};
 
 export const setupScene = (container) => {
   const scene = new THREE.Scene();
@@ -308,6 +362,86 @@ export const filterStars = {
   },
 };
 
+// Enhanced color function with more realistic stellar colors
+const getStarColor = (spectralType, isHighlighted = false) => {
+  const color = new THREE.Color();
+
+  if (!spectralType) return color.setRGB(1, 1, 0.95);
+
+  // RGB values for different spectral types based on real star colors
+  let r, g, b;
+  
+  // Map spectral types to RGB values
+  switch (spectralType[0]) {
+    case "O": // Blue
+      r = 0.5;
+      g = 0.6;
+      b = 1.0;
+      break;
+    case "B": // Blue-white
+      r = 0.7;
+      g = 0.8;
+      b = 1.0;
+      break;
+    case "A": // White with blue tint
+      r = 0.95;
+      g = 0.95;
+      b = 1.0;
+      break;
+    case "F": // White with yellow tint
+      r = 1.0;
+      g = 1.0;
+      b = 0.9;
+      break;
+    case "G": // Yellow (Sun-like)
+      r = 1.0;
+      g = 0.95;
+      b = 0.8;
+      break;
+    case "K": // Orange
+      r = 1.0;
+      g = 0.8;
+      b = 0.5;
+      break;
+    case "M": // Red
+      r = 1.0;
+      g = 0.5;
+      b = 0.2;
+      break;
+    default: // White fallback
+      r = 1.0;
+      g = 1.0;
+      b = 1.0;
+  }
+
+  // Adjust brightness for highlighted stars
+  if (isHighlighted) {
+    r = Math.min(1.0, r + 0.1);
+    g = Math.min(1.0, g + 0.1);
+    b = Math.min(1.0, b + 0.1);
+  }
+
+  return color.setRGB(r, g, b);
+};
+
+// Enhanced size calculation for better visual hierarchy
+const getStarSize = (magnitude, isHighlighted = false) => {
+  if (magnitude === null || magnitude === undefined) return 3;
+  
+  // Adjusted formula to create more variation between bright and dim stars
+  let size = 3 + Math.pow(1.8, (6 - magnitude));
+  
+  // Cap the maximum size for very bright stars
+  size = Math.min(size, 25);
+  
+  // Enhance highlighted stars
+  if (isHighlighted) {
+    size *= 1.4;
+  }
+  
+  return size;
+};
+
 export const createStarField = (
   stars,
   highlightedStars = [],
@@ -319,14 +453,17 @@ export const createStarField = (
   const sizes = [];
 
   stars.forEach((star) => {
+    // Position
     positions.push(star.x * 100, star.y * 100, star.z * 100);
 
+    // Color based on spectral type
     const isHighlighted =
       highlightedStars.includes(star.id) ||
       (constellation && star.con === constellation);
     const color = getStarColor(star.spect, isHighlighted);
     colors.push(color.r, color.g, color.b);
 
+    // Size based on magnitude
     const size = getStarSize(star.mag, isHighlighted);
     sizes.push(size);
   });
@@ -338,19 +475,22 @@ export const createStarField = (
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
 
-  const material = new THREE.PointsMaterial({
-    size: 5,
-    vertexColors: true,
-    sizeAttenuation: true,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-  });
+  // Create the shader material
+  const material = createStarShaderMaterial();
 
+  // Create the star points with our custom shader
   const points = new THREE.Points(geometry, material);
   points.userData.stars = stars;
-
+  
+  // Improve rendering performance
+  points.frustumCulled = false;
+  
   return points;
 };
+
+// This old function is now replaced by the enhanced one defined above
+
+// This old function is now replaced by the enhanced RGB-based getStarColor function defined above
 
 export const createConstellationLines = (stars, constellationAbbreviation) => {
   if (!constellationAbbreviation) {
@@ -397,14 +537,15 @@ export const createConstellationLines = (stars, constellationAbbreviation) => {
       new THREE.Float32BufferAttribute(positions, 3)
   );
 
+  // Enhanced constellation line material with glow effect
   const material = new THREE.LineBasicMaterial({
-    color: 0x4444ff,
-    opacity: 0.8,
+    color: 0x6080ff, // More vibrant blue color
+    opacity: 0.7,
     transparent: true,
     linewidth: 1,
-    depthTest: true,
-    depthWrite: true,
-    alphaTest: 0,
+    depthTest: false, // Prevents lines from being occluded
+    depthWrite: false, 
+    blending: THREE.AdditiveBlending, // Adds glow effect
     side: THREE.DoubleSide
   });
 
@@ -425,20 +566,63 @@ export const createSolarSystem = (scale = 2e-6) => {
   const group = new THREE.Group();
   group.userData.type = "solarSystem";
 
-  const sunTexture = loadTexture('assets/sun.jpg');
+  // Enhanced sun with glow effect
   const sunGeometry = new THREE.SphereGeometry(
       SOLAR_SYSTEM.sun.radius * scale * 20,
       32,
       32
   );
+  
+  // Load texture for realistic sun appearance
+  const sunTexture = loadTexture('assets/sun.jpg');
+  
+  // Create a glowing material for the sun
   const sunMaterial = new THREE.MeshBasicMaterial({
     map: sunTexture,
+    color: 0xffff80,
+    emissive: 0xffaa00,
   });
+  
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sun.userData = {
     ...SOLAR_SYSTEM.sun,
     objectType: "sun",
   };
+  
+  // Add sun glow effect
+  const sunGlowGeometry = new THREE.SphereGeometry(
+    SOLAR_SYSTEM.sun.radius * scale * 22,
+    32,
+    32
+  );
+  
+  const sunGlowMaterial = new THREE.ShaderMaterial({
+    uniforms: {},
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      void main() {
+        float intensity = pow(0.7 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
+        gl_FragColor = vec4(1.0, 0.8, 0.3, 1.0) * intensity;
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.BackSide
+  });
+  
+  const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
+  sun.add(sunGlow);
   sun.renderOrder = 1;
   group.add(sun);
 
@@ -468,6 +652,7 @@ export const createSolarSystem = (scale = 2e-6) => {
 
     const planetMaterial = new THREE.MeshPhongMaterial({
       map: texture,
+      shininess: 15,
     });
 
     const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
@@ -476,20 +661,58 @@ export const createSolarSystem = (scale = 2e-6) => {
       ...planet,
       objectType: "planet",
     };
+    
+    // Add planet atmosphere for Earth
+    if (planet.name === "Earth") {
+      const atmosphereGeometry = new THREE.SphereGeometry(
+        planet.radius * scale * 2100,
+        32,
+        32
+      );
+      
+      const atmosphereMaterial = new THREE.ShaderMaterial({
+        uniforms: {},
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          void main() {
+            float intensity = pow(0.7 - dot(vNormal, vec3(0, 0, 1.0)), 1.5);
+            gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+          }
+        `,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      
+      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      planetMesh.add(atmosphere);
+    }
+    
     planetMesh.renderOrder = 1;
     group.add(planetMesh);
 
+    // Enhanced orbit with slight glow effect
     const orbitGeometry = new THREE.RingGeometry(
         planet.distance * scale,
         planet.distance * scale * 1.001,
-        64
+        128
     );
+    
     const orbitMaterial = new THREE.LineBasicMaterial({
-      color: 0x444444,
+      color: 0x6666aa,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.4,
       depthWrite: false,
+      blending: THREE.AdditiveBlending
     });
+    
     const orbit = new THREE.Line(orbitGeometry, orbitMaterial);
     orbit.rotation.x = Math.PI / 2;
     orbit.renderOrder = 0;
@@ -497,53 +720,4 @@ export const createSolarSystem = (scale = 2e-6) => {
   });
 
   return group;
-};
-
-
-const getStarColor = (spectralType, isHighlighted = false) => {
-  const color = new THREE.Color();
-
-  if (!spectralType) return color.setHSL(0, 0, 1);
-
-  let h, s, l;
-  switch (spectralType[0]) {
-    case "O":
-      [h, s, l] = [0.6, 1, 0.9];
-      break;
-    case "B":
-      [h, s, l] = [0.55, 1, 0.8];
-      break;
-    case "A":
-      [h, s, l] = [0.5, 1, 0.7];
-      break;
-    case "F":
-      [h, s, l] = [0.45, 1, 0.6];
-      break;
-    case "G":
-      [h, s, l] = [0.4, 1, 0.5];
-      break;
-    case "K":
-      [h, s, l] = [0.35, 1, 0.4];
-      break;
-    case "M":
-      [h, s, l] = [0.3, 1, 0.3];
-      break;
-    default:
-      [h, s, l] = [0, 0, 1];
-  }
-
-  if (isHighlighted) {
-    l = Math.min(1, l + 0.3);
-  }
-
-  return color.setHSL(h, s, l);
-};
-
-const getStarSize = (magnitude, isHighlighted = false) => {
-  if (magnitude === null || magnitude === undefined) return 2;
-  let size = Math.max(2, 10 - magnitude);
-  if (isHighlighted) {
-    size *= 1.5;
-  }
-  return size;
 };
