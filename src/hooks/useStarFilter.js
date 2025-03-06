@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { CONSTELLATION_CONNECTIONS, filterStars } from "../utils/threeHelper";
+import { filterStars } from "../utils/threeHelper";
+import { CONSTELLATION_CONNECTIONS } from "../data/constellationData";
 
 const getStarTemperature = (spect) => {
   if (!spect) return 5000;
