@@ -15,12 +15,12 @@ import ErrorMessage from "./ErrorMessage";
 import useCameraControls from "../../hooks/useCameraControls";
 import useStarFilter from "../../hooks/useStarFilter";
 import {
-  CONSTELLATION_CONNECTIONS,
   createConstellationLines,
   createSolarSystem,
   createStarField,
   setupScene,
 } from "../../utils/threeHelper";
+import { CONSTELLATION_CONNECTIONS } from "../../data/constellationData";
 
 const StarVisualization = forwardRef(
     ({ filters, activeModes, searchQuery, isFreeCamera, onCameraToggle }, ref) => {
