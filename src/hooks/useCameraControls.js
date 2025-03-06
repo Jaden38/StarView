@@ -19,9 +19,9 @@ const useCameraControls = (
     rotateLeft: false,
     rotateRight: false,
   });
-  
+
   const speedRef = useRef(50);
-  const movementSensitivity = useRef(1.0); // Sensibilité du mouvement ajustable
+  const movementSensitivity = useRef(1.0);
   const pointerControlsRef = useRef(null);
 
   const handleKeyDown = (event) => {
@@ -55,11 +55,17 @@ const useCameraControls = (
         speedRef.current = 100;
         break;
       case "+":
-        movementSensitivity.current = Math.min(movementSensitivity.current + 0.1, 5.0);
+        movementSensitivity.current = Math.min(
+          movementSensitivity.current + 0.1,
+          5.0
+        );
         console.log(`Sensibilité augmentée : ${movementSensitivity.current}`);
         break;
       case "-":
-        movementSensitivity.current = Math.max(movementSensitivity.current - 0.1, 0.1);
+        movementSensitivity.current = Math.max(
+          movementSensitivity.current - 0.1,
+          0.1
+        );
         console.log(`Sensibilité diminuée : ${movementSensitivity.current}`);
         break;
     }
@@ -155,7 +161,7 @@ const useCameraControls = (
       rotateLeft,
       rotateRight,
     } = moveRef.current;
-    const speed = speedRef.current * movementSensitivity.current; // Application de la sensibilité
+    const speed = speedRef.current * movementSensitivity.current;
 
     if (forward) camera.position.addScaledVector(direction, speed);
     if (backward) camera.position.addScaledVector(direction, -speed);
