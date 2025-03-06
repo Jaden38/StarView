@@ -37,13 +37,14 @@ const StarVisualization = forwardRef(
     const resizeObserverRef = useRef(null);
     const constellationLinesRef = useRef([]);
     const starFieldRef = useRef(null);
+    const hoverTimeoutRef = useRef(null);
 
     const { stars, loading, error } = useStarData();
     const [selectedStar, setSelectedStar] = useState(null);
     const [selectedObject, setSelectedObject] = useState(null);
     const [constellation, setConstellation] = useState(null);
     const [lastModes, setLastModes] = useState([]);
-    const [activeConstellationLines] = useState(new Map());
+    const [isMouseDown, setIsMouseDown] = useState(false);
 
     const { updateCameraPosition } = useCameraControls(
       cameraRef.current,
@@ -168,6 +169,7 @@ const StarVisualization = forwardRef(
       raycaster.params.Points.threshold = 10;
 
       const mouse = new THREE.Vector2();
+
       const handleMouseMove = (event) => {
         if (!containerRef.current) return;
 
@@ -175,44 +177,67 @@ const StarVisualization = forwardRef(
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+        }
 
-        if (activeModes.includes("solarSystem")) {
-          const solarSystem = scene.children.find(
-            (child) => child.userData.type === "solarSystem"
+        hoverTimeoutRef.current = setTimeout(() => {
+          raycaster.setFromCamera(mouse, camera);
+
+          if (activeModes.includes("solarSystem")) {
+            const solarSystem = scene.children.find(
+              (child) => child.userData.type === "solarSystem"
+            );
+            if (solarSystem) {
+              const intersects = raycaster
+                .intersectObjects(solarSystem.children, false)
+                .filter((intersect) => intersect.object.userData.objectType);
+
+              if (intersects.length > 0) {
+                const object = intersects[0].object;
+
+                if (
+                  !selectedObject ||
+                  selectedObject.name !== object.userData.name
+                ) {
+                  setSelectedObject(object.userData);
+                  setSelectedStar(null);
+                }
+              } else if (!isMouseDown) {
+                setSelectedObject(null);
+              }
+            }
+          }
+
+          const starField = scene.children.find(
+            (child) => child instanceof THREE.Points
           );
-          if (solarSystem) {
-            const intersects = raycaster
-              .intersectObjects(solarSystem.children, false)
-              .filter((intersect) => intersect.object.userData.objectType);
-
+          if (starField) {
+            const intersects = raycaster.intersectObject(starField);
             if (intersects.length > 0) {
-              const object = intersects[0].object;
-              setSelectedObject(object.userData);
-              setSelectedStar(null);
-            } else {
-              setSelectedObject(null);
-            }
-          }
-        }
+              const index = intersects[0].index;
+              const star = starField.userData.stars[index];
 
-        const starField = scene.children.find(
-          (child) => child instanceof THREE.Points
-        );
-        if (starField) {
-          const intersects = raycaster.intersectObject(starField);
-          if (intersects.length > 0) {
-            const index = intersects[0].index;
-            const star = starField.userData.stars[index];
-            setSelectedStar(star);
-            setSelectedObject(null);
-            if (star.con) {
-              setConstellation(star.con);
+              if (!selectedStar || selectedStar.id !== star.id) {
+                setSelectedStar(star);
+                setSelectedObject(null);
+                if (star.con) {
+                  setConstellation(star.con);
+                }
+              }
+            } else if (!activeModes.includes("solarSystem") && !isMouseDown) {
+              setSelectedStar(null);
             }
-          } else if (!activeModes.includes("solarSystem")) {
-            setSelectedStar(null);
           }
-        }
+        }, 50);
+      };
+
+      const handleMouseDown = () => {
+        setIsMouseDown(true);
+      };
+
+      const handleMouseUp = () => {
+        setIsMouseDown(false);
       };
 
       if (filteredStars.length > 0) {
@@ -267,6 +292,9 @@ const StarVisualization = forwardRef(
       }
 
       containerRef.current.addEventListener("mousemove", handleMouseMove);
+      containerRef.current.addEventListener("mousedown", handleMouseDown);
+      containerRef.current.addEventListener("mouseup", handleMouseUp);
+      containerRef.current.addEventListener("mouseleave", handleMouseUp);
 
       const animate = () => {
         animationFrameRef.current = requestAnimationFrame(animate);
@@ -294,17 +322,28 @@ const StarVisualization = forwardRef(
           if (solarSystem) {
             solarSystem.children.forEach((child) => {
               if (child.userData.objectType === "planet") {
+                const planetData = child.userData;
                 const scale = 2e-6;
-                const orbitalDistance = child.userData.distance * scale;
-                const orbitalPeriod = child.userData.orbitalPeriod;
-                const speedFactor = 0.1;
-                const angularSpeed =
-                  (2 * Math.PI) / (orbitalPeriod * speedFactor);
-                const time = performance.now() * 0.001;
-                const angle = time * angularSpeed;
+                const orbitalDistance = planetData.distance * scale;
+                const orbitalPeriod = planetData.orbitalPeriod;
 
-                child.position.x = orbitalDistance * Math.cos(angle);
-                child.position.z = orbitalDistance * Math.sin(angle);
+                const orbitalSpeedFactor =
+                  filters.orbitalSpeed !== undefined ? filters.orbitalSpeed : 5;
+
+                if (orbitalSpeedFactor !== 0) {
+                  const orbitalSpeed = 11 - orbitalSpeedFactor;
+
+                  const speedFactor = 0.1 * (orbitalSpeed / 5);
+                  const angularSpeed =
+                    (2 * Math.PI) / (orbitalPeriod * speedFactor);
+                  const time = performance.now() * 0.001;
+                  const angle = time * angularSpeed;
+
+                  child.position.x = orbitalDistance * Math.cos(angle);
+                  child.position.z = orbitalDistance * Math.sin(angle);
+
+                  child.rotation.y += 0.001 * orbitalSpeedFactor;
+                }
               }
             });
           }
@@ -322,6 +361,16 @@ const StarVisualization = forwardRef(
             "mousemove",
             handleMouseMove
           );
+          containerRef.current.removeEventListener(
+            "mousedown",
+            handleMouseDown
+          );
+          containerRef.current.removeEventListener("mouseup", handleMouseUp);
+          containerRef.current.removeEventListener("mouseleave", handleMouseUp);
+        }
+
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
         }
 
         constellationLinesRef.current.forEach((line) => {
@@ -340,6 +389,9 @@ const StarVisualization = forwardRef(
       isFreeCamera,
       updateCameraPosition,
       filteredStars,
+      selectedObject,
+      selectedStar,
+      isMouseDown,
     ]);
 
     return (

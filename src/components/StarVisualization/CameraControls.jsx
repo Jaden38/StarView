@@ -105,7 +105,7 @@ const CameraControls = ({ isFreeCamera }) => {
 
   return (
     <div className="absolute left-0 right-0 top-0 flex justify-start pt-4">
-      <Card 
+      <Card
         className={cn(
           "bg-zinc-950/90 border-zinc-800/20 backdrop-blur-sm shadow-2xl ml-4",
           isVisible && "animate-in fade-in slide-in-from-left-4 duration-300"

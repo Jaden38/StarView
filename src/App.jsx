@@ -13,6 +13,7 @@ const App = () => {
     magnitudeType: "apparent",
     minTemp: 2000,
     maxDistance: 1000,
+    orbitalSpeed: 5,
   });
 
   const handleFilterChange = (filterName, value) => {
