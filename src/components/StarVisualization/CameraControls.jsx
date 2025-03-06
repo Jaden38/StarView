@@ -12,7 +12,7 @@ const ControlRow = ({ keys, description }) => (
         <Badge
           key={index}
           variant="outline"
-          className="bg-zinc-900 border-zinc-700 text-zinc-300 px-2 py-0.5 min-w-[24px] text-center font-mono text-xs"
+          className="bg-zinc-950 border-zinc-700 text-zinc-300 px-2 py-0.5 min-w-[24px] text-center font-mono text-xs"
         >
           {key}
         </Badge>
@@ -49,20 +49,14 @@ const CameraControls = ({ isFreeCamera }) => {
 
   if (!isFreeCamera) return null;
 
-  const increaseSensitivity = () => {
-    setSensitivity((prev) => Math.min(prev + 0.1, 5.0));
-  };
 
-  const decreaseSensitivity = () => {
-    setSensitivity((prev) => Math.max(prev - 0.1, 0.1));
-  };
 
   return (
     <div className="absolute left-0 right-0 top-0 flex justify-start pt-4">
       {isVisible && (
         <Card 
           className={cn(
-            "bg-zinc-900/90 border-zinc-800/50 backdrop-blur-md shadow-xl ml-4 p-4 rounded-lg",
+            "bg-zinc-950/90 border-zinc-800/20 backdrop-blur-sm shadow-xl ml-4 p-4 rounded-lg",
             "animate-in fade-in slide-in-from-left-4 duration-300"
           )}
         >
@@ -94,7 +88,7 @@ const CameraControls = ({ isFreeCamera }) => {
               <ControlRow keys={['←', '→']} description="Rotate view" />
               <div className="flex items-center space-x-3 text-sm">
                 <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 px-2">
+                  <Badge variant="outline" className="bg-zinc-950 border-zinc-700 text-zinc-300 px-2">
                     <Mouse className="w-3 h-3" />
                   </Badge>
                 </div>
@@ -105,11 +99,11 @@ const CameraControls = ({ isFreeCamera }) => {
             {/* Sensitivity Controls */}
             <div>
               <h4 className="text-xs font-medium text-zinc-500 mb-2">SENSITIVITY</h4>
-                <span className="text-zinc-300 text-sm font-mono px-4 py-1 bg-zinc-700 rounded-md shadow-inner">
+              <Badge variant="outline" className="bg-zinc-950 border-zinc-700 text-zinc-300 px-2">
                   {sensitivity.toFixed(1)}
-                </span>
-              <p className="text-zinc-500 text-xs mt-2 text-center">
-                Use <kbd className="bg-zinc-700 px-1 rounded">+</kbd> and <kbd className="bg-zinc-700 px-1 rounded">-</kbd> on keyboard to adjust
+                </Badge>
+                <p className="text-zinc-500 text-xs mt-2 text-center">
+                Use <kbd className="bg-zinc-900 px-1 rounded">+</kbd> and <kbd className="bg-zinc-900 px-1 rounded">-</kbd> on keyboard to adjust
               </p>
             </div>
           </div>
