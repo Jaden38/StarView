@@ -37,6 +37,7 @@ const StarVisualization = forwardRef(
     const resizeObserverRef = useRef(null);
     const constellationLinesRef = useRef([]);
     const starFieldRef = useRef(null);
+    const solarSystemRef = useRef(null);
     const hoverTimeoutRef = useRef(null);
 
     const { stars, loading, error } = useStarData();
@@ -129,6 +130,30 @@ const StarVisualization = forwardRef(
       };
     }, [loading]);
 
+    const cleanupSceneObjects = (scene, preserveTypes = []) => {
+      const childrenToCheck = [...scene.children];
+
+      childrenToCheck.forEach((child) => {
+        const isConstellationLine =
+          constellationLinesRef.current.includes(child);
+        const isPreservedType =
+          child.userData?.type && preserveTypes.includes(child.userData.type);
+
+        if (!isConstellationLine && !isPreservedType) {
+          scene.remove(child);
+
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        }
+      });
+    };
+
     useEffect(() => {
       if (
         !sceneRef.current ||
@@ -150,13 +175,7 @@ const StarVisualization = forwardRef(
 
       setLastModes(activeModes);
 
-      const currentConstellationLines = new Set(constellationLinesRef.current);
-
-      scene.children.forEach((child) => {
-        if (!currentConstellationLines.has(child)) {
-          scene.remove(child);
-        }
-      });
+      cleanupSceneObjects(scene);
 
       const ambientLight = new THREE.AmbientLight(0x404040, 2);
       scene.add(ambientLight);
@@ -186,12 +205,12 @@ const StarVisualization = forwardRef(
 
           if (activeModes.includes("solarSystem")) {
             const solarSystem = scene.children.find(
-              (child) => child.userData.type === "solarSystem"
+              (child) => child.userData?.type === "solarSystem"
             );
             if (solarSystem) {
               const intersects = raycaster
                 .intersectObjects(solarSystem.children, false)
-                .filter((intersect) => intersect.object.userData.objectType);
+                .filter((intersect) => intersect.object.userData?.objectType);
 
               if (intersects.length > 0) {
                 const object = intersects[0].object;
@@ -247,13 +266,15 @@ const StarVisualization = forwardRef(
 
         if (activeModes.includes("constellations")) {
           const constellations = [
-            ...new Set(filteredStars.map((star) => star.con)),
+            ...new Set(
+              filteredStars.filter((star) => star.con).map((star) => star.con)
+            ),
           ];
 
           constellations.forEach((con) => {
             if (con && CONSTELLATION_CONNECTIONS[con]) {
               let constellationLines = constellationLinesRef.current.find(
-                (line) => line.userData.constellation === con
+                (line) => line.userData?.constellation === con
               );
 
               if (!constellationLines) {
@@ -281,7 +302,27 @@ const StarVisualization = forwardRef(
       }
 
       if (activeModes.includes("solarSystem")) {
+        const existingSolarSystem = scene.children.find(
+          (child) => child.userData?.type === "solarSystem"
+        );
+
+        if (existingSolarSystem) {
+          scene.remove(existingSolarSystem);
+
+          existingSolarSystem.children.forEach((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((material) => material.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          });
+        }
+
         const solarSystem = createSolarSystem();
+        solarSystemRef.current = solarSystem;
         scene.add(solarSystem);
 
         if (isNewSolarSystemMode) {
@@ -289,6 +330,8 @@ const StarVisualization = forwardRef(
           camera.lookAt(0, 0, 0);
           controls.target.set(0, 0, 0);
         }
+      } else {
+        solarSystemRef.current = null;
       }
 
       containerRef.current.addEventListener("mousemove", handleMouseMove);
@@ -316,12 +359,12 @@ const StarVisualization = forwardRef(
 
         if (activeModes.includes("solarSystem")) {
           const solarSystem = scene.children.find(
-            (child) => child.userData.type === "solarSystem"
+            (child) => child.userData?.type === "solarSystem"
           );
 
           if (solarSystem) {
             solarSystem.children.forEach((child) => {
-              if (child.userData.objectType === "planet") {
+              if (child.userData?.objectType === "planet") {
                 const planetData = child.userData;
                 const scale = 2e-6;
                 const orbitalDistance = planetData.distance * scale;
